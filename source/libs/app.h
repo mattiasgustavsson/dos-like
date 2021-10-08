@@ -764,6 +764,9 @@ details.
 
     #include <GL/glew.h>
     #include <SDL2/SDL_opengl.h>
+    #ifndef GLAPIENTRY 
+        #define GLAPIENTRY
+    #endif
     #define APP_GLCALLTYPE GLAPIENTRY
     typedef GLuint APP_GLuint;
     typedef GLsizei APP_GLsizei;
