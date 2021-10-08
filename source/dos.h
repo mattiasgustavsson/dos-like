@@ -2758,23 +2758,8 @@ void bin2arr( char const* src, char const* dst, char const* name ) {
 
 //*** main ***
 
-#if !defined(__TINYC__) && !defined( NDEBUG )
-    #pragma warning( push ) 
-    #pragma warning( disable: 4619 ) // pragma warning : there is no warning number 'number'
-    #pragma warning( disable: 4668 ) // 'symbol' is not defined as a preprocessor macro, replacing with '0' for 'directives'
-    #include <crtdbg.h>
-    #pragma warning( pop ) 
-#endif
-
-
 int main( int argc, char** argv ) {
     (void) argc, argv;
-    #if !defined(__TINYC__) && !defined( NDEBUG )
-        int flag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG ); // Get current flag
-        flag ^= _CRTDBG_LEAK_CHECK_DF; // Turn on leak-checking bit
-        _CrtSetDbgFlag( flag ); // Set flag to the new value
-//        _CrtSetBreakAlloc( 0 );
-    #endif
 
     //bin2arr( "framecol.gif", "crtframecol.h", "crtframecol" );
     //bin2arr( "framealpha.gif", "crtframealpha.h", "crtframealpha" );
