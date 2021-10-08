@@ -17,6 +17,12 @@ To build individual samples, do:
 ```  
 where `stranded.c` should be replaced with the sample you like to build.
 
+Alternatively, from a Visual Studio Developer Command Prompt, do:
+```
+  cl source\stranded.c source\dos.c
+```  
+where `stranded.c` should be replaced with the sample you like to build.
+
 ## Mac
 
 To build on Mac (which I don't test myself, but might work):
