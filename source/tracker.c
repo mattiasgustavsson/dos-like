@@ -1186,6 +1186,11 @@ void tracker_draw( struct tracker_t* tracker ) {
         cursoff();
     }
     
+    unsigned char* scr = screenbuffer();
+    int ofs = tracker->mouse_x + tracker->mouse_y * screenwidth();
+    unsigned char v = scr[ ofs * 2 + 1 ];
+    v = ~v;
+    scr[ ofs * 2 + 1 ] = v;
 }
 
 

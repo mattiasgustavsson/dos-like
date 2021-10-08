@@ -1185,8 +1185,8 @@ void crtemu_pc_coordinates_window_to_bitmap( crtemu_pc_t* crtemu_pc, int width, 
     int window_width = viewport[ 2 ] - viewport[ 0 ];
     int window_height = viewport[ 3 ] - viewport[ 1 ];
 
-    int aspect_width = ( window_height * 4 ) / 3;
-    int aspect_height= ( window_width * 3 ) / 4;
+    int aspect_width = (int)( ( window_height * 4.25f ) / 3 );
+    int aspect_height= (int)( ( window_width * 3 ) / 4.25f );
     int target_width, target_height;
     if( aspect_height <= window_height ) 
         {

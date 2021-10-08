@@ -2518,6 +2518,10 @@ static int app_proc( app_t* app, void* user_data ) {
             tsf_set_volume( sound_context.soundfont, music_volume / 255.0f );
             if( current_music->format == MUSIC_FORMAT_MID ) {
                 sound_context.music_next = (tml_message*)( current_music + 1 );
+                tsf_reset( sound_context.soundfont );
+                for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
+                    tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+                }
             } else {
                 sound_context.music_next = NULL;
                 mus_t* mus = (mus_t*)( current_music + 1 );
