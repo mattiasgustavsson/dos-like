@@ -15,6 +15,7 @@ jobs:
   build-windows-tcc:
     runs-on: windows-2019
     steps:
+      - uses: actions/checkout@v1
       - name: build burn
         run: |
           tcc/tcc source/burn.c source/dos.c
