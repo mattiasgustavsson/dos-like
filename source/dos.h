@@ -2784,11 +2784,14 @@ int main( int argc, char** argv ) {
 }
 
 
-// pass-through so the program will build with either /SUBSYSTEM:WINDOWS or /SUBSYSTEM:CONSOLE
-int WINAPI __stdcall WinMain( HINSTANCE a, HINSTANCE b, char* c, int d ) { 
-    (void) a, b, c, d; 
-    return main( __argc, __argv ); 
-}
+#ifdef _WIN32
+    // pass-through so the program will build with either /SUBSYSTEM:WINDOWS or /SUBSYSTEM:CONSOLE
+    int WINAPI __stdcall WinMain( HINSTANCE a, HINSTANCE b, char* c, int d ) { 
+        (void) a, b, c, d; 
+        return main( __argc, __argv ); 
+    }
+#endif
+
 
 #endif /* DOS_IMPLEMENTATION */
 
