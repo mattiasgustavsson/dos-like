@@ -2658,7 +2658,11 @@ static int app_proc( app_t* app, void* user_data ) {
 
 
 #define APP_IMPLEMENTATION
-#define APP_WINDOWS
+#ifdef _WIN32 
+    #define APP_WINDOWS
+#else 
+    #define APP_SDL
+#endif
 #define APP_LOG( ctx, level, message ) 
 #include "libs/app.h"
 
