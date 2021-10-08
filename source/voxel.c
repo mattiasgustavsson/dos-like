@@ -3,6 +3,7 @@
 // See end of the file for original license - I place my changes under the same
 //      /Mattias Gustavsson
 
+#include <stddef.h>
 #include <stdint.h>
 #include <math.h>
 #include "dos.h"
