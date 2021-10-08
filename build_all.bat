@@ -4,6 +4,7 @@ tcc\tcc source\mandelbrot.c source\dos.c
 tcc\tcc source\plasma.c source\dos.c
 tcc\tcc source\raycast.c source\dos.c
 tcc\tcc source\rotozoom.c source\dos.c
+tcc\tcc source\sound.c source\dos.c
 tcc\tcc source\stranded.c source\dos.c
 tcc\tcc source\tracker.c source\dos.c
 tcc\tcc source\tunnel.c source\dos.c
