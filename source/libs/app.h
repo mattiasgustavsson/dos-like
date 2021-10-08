@@ -266,7 +266,7 @@ where `my_log_func` is your own logging function. Just like for the memory alloc
 and is just a `void*` value which is passed through. But in the case of logging, it will be passed through as the value
 off the `logctx` parameter passed into `app_run`. The `level` parameter specifies the severity level of the logging,
 and can be used to direct different types of messages to different logging systems, or filter out messages of certain
-severity level, e.g. supressing informational messages.
+severity level, e.g. suppressing informational messages.
 
 
 #### Custom fatal error function
@@ -428,7 +428,7 @@ app_pointer
 
     void app_pointer( app_t* app, int width, int height, APP_U32* pixels_abgr, int hotspot_x, int hotspot_y )
 
-Sets the appearence current mouse pointer. `app_pointer` is called with the following parameters:
+Sets the appearance current mouse pointer. `app_pointer` is called with the following parameters:
 
 * width, height - the horizontal and vertical dimensions of the mouse pointer bitmap.
 * pixels_abgr - width x height number of pixels making up the pointer bitmap, each pixel being a 32-bit unsigned integer
@@ -486,7 +486,7 @@ app_interpolation
 
 app.h supports two different modes of displaying a bitmap. When using `APP_INTERPOLATION_LINEAR`, the bitmap will be
 drawn with bilinear interpolations, stretching it to fill the window (maintaining aspect ratio), giving it a smooth, if
-somwhat blurry, look. With `APP_INTERPOLATION_NONE`, scaling will only be done on whole pixel ratios, using no
+somewhat blurry, look. With `APP_INTERPOLATION_NONE`, scaling will only be done on whole pixel ratios, using no
 interpolation, which is particularly suitable to maintain the clean, precise look of pixel art.
 `APP_INTERPOLATION_LINEAR` is the default setting.
 
@@ -552,7 +552,7 @@ app_displays
 
 Returns a list of all displays connected to the system. For each display, the following fields are reported:
 * id - a platform specific string used to identify the display. Useful for saving which display was in use.
-* x, y - position of the top left corner of the display, relative to the primary dispay which is always at 0,0.
+* x, y - position of the top left corner of the display, relative to the primary display which is always at 0,0.
 * width, height - size of the display, in pixels.
 
 
@@ -635,7 +635,7 @@ app_input
 
     app_input_t app_input( app_t* app )
 
-Returns a list of input events which occured since the last call to `app_input`. Each input event can be of one of a
+Returns a list of input events which occurred since the last call to `app_input`. Each input event can be of one of a
 list of types, and the `type` field of the `app_input_event_t` struct specifies which type the event is. The `data`
 struct is a union of fields, where only one of them is valid, depending on the value of `type`:
 * APP_INPUT_KEY_DOWN, APP_INPUT_KEY_UP, APP_INPUT_DOUBLE_CLICK - use the `key` field of the `data` union, which contains

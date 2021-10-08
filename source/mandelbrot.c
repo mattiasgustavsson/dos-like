@@ -63,7 +63,7 @@ Lode's Computer Graphics Tutorial
 Legal Stuff
 This tutorial (including all the separate articles) is Copyright (c) 2004-2007 by Lode Vandevenne. All rights reserved. Do not copy/translate any of the content of this tutorial to a site/book/whatever without my permission.
 
-Some photos are taken from the free photo archive at morguefile.com. These are of course copyright by the authors and contributers of Morguefile. A thank you goes to the photographers!
+Some photos are taken from the free photo archive at morguefile.com. These are of course copyright by the authors and contributors of Morguefile. A thank you goes to the photographers!
 
 The source code of QuickCG and all the source code of the examples given in this tutorial and all its articles is released under the following license:
 

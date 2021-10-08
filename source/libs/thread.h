@@ -465,7 +465,7 @@ Initializes the specified queue instance, preparing it for use. The queue is a l
 single-producer/single-consumer queue - it will not acquire any locks as long as there is space for adding or items to
 be consume, but will lock and wait when there is not. The `size` parameter specifies the number of elements in the 
 queue. The `values` parameter is an array of queue slots (`size` elements in length), each being of type `void*`. If
-the queue is initially empty, the `count` parameter should be 0, otherwise it indicates the number of entires, from the
+the queue is initially empty, the `count` parameter should be 0, otherwise it indicates the number of entries, from the
 start of the `values` array, that the queue is initialized with. The `values` array is not copied, and must remain valid
 until `thread_queue_term` is called.
 
