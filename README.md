@@ -8,6 +8,10 @@ Includes a bunch of examples of classic DOS techniques and effects.
 
 Also available from https://mattiasgustavsson.itch.io/dos-like
 
+While running, you can use F11 to toggle between fullscreen and windowed mode.
+
+To start in windowed mode, add the flag -w or --window to the commandline when running.
+
 ## Windows
 
 Tiny C Compiler for windows is included. To build all samples, run build_all.bat.
