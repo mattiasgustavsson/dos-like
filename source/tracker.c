@@ -168,17 +168,17 @@ struct tracker_t {
 };
 
 
-int internal_tracker_key_pressed( struct tracker_t* tracker, enum key_t key ) {
+int internal_tracker_key_pressed( struct tracker_t* tracker, enum keyenum_t key ) {
     return tracker->keyboard_state[ key ] && !tracker->prev_keyboard_state[ key ];
 }
 
 
-int internal_tracker_key_released( struct tracker_t* tracker, enum key_t key ) {
+int internal_tracker_key_released( struct tracker_t* tracker, enum keyenum_t key ) {
     return !tracker->keyboard_state[ key ] && tracker->prev_keyboard_state[ key ];
 }
 
 
-int internal_tracker_key_down( struct tracker_t* tracker, enum key_t key ) {
+int internal_tracker_key_down( struct tracker_t* tracker, enum keyenum_t key ) {
     return tracker->keyboard_state[ key ];
 }
 
@@ -736,7 +736,7 @@ void tracker_update_play( struct tracker_t* tracker, int delta_time_us ) {
 
 void tracker_update( struct tracker_t* tracker ) {
     struct keyboard_note_map_t {
-        enum key_t key;
+        enum keyenum_t key;
         int note;
     } keyboard_note_map[] = {
         { KEY_Z,           0 }, // C
@@ -782,12 +782,12 @@ void tracker_update( struct tracker_t* tracker ) {
     tracker->mouse_y = mousey();
     memcpy( tracker->prev_keyboard_state, tracker->keyboard_state, sizeof( tracker->prev_keyboard_state ) );
     for( int i = 0; i < KEYCOUNT; ++i ) {
-        if( !keystate( (enum key_t) i ) ) {
+        if( !keystate( (enum keyenum_t) i ) ) {
             tracker->keyboard_state[ i ] = 0;
         }
     }
-    for( enum key_t* keys = readkeys(); *keys != KEY_INVALID; ++keys ) {
-        enum key_t key = *keys;
+    for( enum keyenum_t* keys = readkeys(); *keys != KEY_INVALID; ++keys ) {
+        enum keyenum_t key = *keys;
         int index = (int) key;
         tracker->keyboard_state[ index ] = 1;
         int in_key_map = 0;

@@ -129,7 +129,7 @@ void stopsound( int channel );
 int soundplaying( int channel );
 
 
-enum key_t { 
+enum keyenum_t { 
     KEY_INVALID, KEY_LBUTTON, KEY_RBUTTON, KEY_CANCEL, KEY_MBUTTON, KEY_XBUTTON1, KEY_XBUTTON2, KEY_BACK, KEY_TAB, 
     KEY_CLEAR, KEY_RETURN, KEY_SHIFT, KEY_CONTROL, KEY_MENU, KEY_PAUSE, KEY_CAPITAL, KEY_KANA, KEY_HANGUL = KEY_KANA,
     KEY_JUNJA, KEY_FINAL, KEY_HANJA, KEY_KANJI = KEY_HANJA, KEY_ESCAPE, KEY_CONVERT, KEY_NONCONVERT, KEY_ACCEPT, 
@@ -151,8 +151,8 @@ enum key_t {
     KEYCOUNT 
 };
 
-int keystate( enum key_t key );
-enum key_t* readkeys( void );
+int keystate( enum keyenum_t key );
+enum keyenum_t* readkeys( void );
 char const* readchars( void );
 int mousex( void );
 int mousey( void );
@@ -343,9 +343,9 @@ struct internals_t {
 
     struct {
         bool keystate[ KEYCOUNT ];
-        enum key_t* keybuffer;
-        enum key_t keybuffer0[ 256 ];
-        enum key_t keybuffer1[ 256 ];
+        enum keyenum_t* keybuffer;
+        enum keyenum_t keybuffer0[ 256 ];
+        enum keyenum_t keybuffer1[ 256 ];
         char* charbuffer;
         char charbuffer0[ 256 ];
         char charbuffer1[ 256 ];
@@ -1395,7 +1395,7 @@ void clrscr( void ) {
 }
 
 
-int keystate( enum key_t key ) {
+int keystate( enum keyenum_t key ) {
     int index = (int) key;
     if( index >= 0 && index < KEYCOUNT ) {
         return internals->input.keystate[ index ];
@@ -1404,7 +1404,7 @@ int keystate( enum key_t key ) {
 }
 
 
-enum key_t* readkeys( void ) {
+enum keyenum_t* readkeys( void ) {
     thread_mutex_lock( &internals->mutex );
     memset( internals->input.keybuffer, 0, sizeof( internals->input.keybuffer0 ) );
     if( internals->input.keybuffer == internals->input.keybuffer0 ) {
@@ -2338,7 +2338,7 @@ static int app_proc( app_t* app, void* user_data ) {
     int curs_x = 0;
     int curs_y = 0;
     bool keystate[ KEYCOUNT ] = { 0 };
-    enum key_t keys[ 256 ] = { 0 };
+    enum keyenum_t keys[ 256 ] = { 0 };
     char chars[ 256] = { 0 };
     APP_U64 crt_time_us = 0;
     APP_U64 prev_time = app_time_count( app );       
@@ -2358,7 +2358,7 @@ static int app_proc( app_t* app, void* user_data ) {
                 if( index > 0 && index < KEYCOUNT ) {
                     keystate[ index ] = true;
                     if( keys_index < 255 ) {
-                        keys[ keys_index++ ] = (enum key_t)event->data.key;
+                        keys[ keys_index++ ] = (enum keyenum_t)event->data.key;
                     }
                 }
                 if( event->data.key == APP_KEY_F11 ) {
@@ -2434,15 +2434,15 @@ static int app_proc( app_t* app, void* user_data ) {
 
         memcpy( internals->input.keystate, keystate, sizeof( internals->input.keystate ) );
 
-        enum key_t* internals_keybuffer;
+        enum keyenum_t* internals_keybuffer;
         if( internals->input.keybuffer == internals->input.keybuffer0 ) {
             internals_keybuffer = internals->input.keybuffer1;
         } else {
             internals_keybuffer = internals->input.keybuffer0;
         }
-        enum key_t* keyin = keys;
-        enum key_t* keyout = internals_keybuffer;
-        enum key_t* keyend = internals_keybuffer + sizeof( internals->input.keybuffer0 ) / sizeof( *internals->input.keybuffer0 ) - 1;
+        enum keyenum_t* keyin = keys;
+        enum keyenum_t* keyout = internals_keybuffer;
+        enum keyenum_t* keyend = internals_keybuffer + sizeof( internals->input.keybuffer0 ) / sizeof( *internals->input.keybuffer0 ) - 1;
         while( *keyout && keyout < keyend ) {
             ++keyout;
         }
