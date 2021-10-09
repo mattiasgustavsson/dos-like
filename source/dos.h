@@ -130,8 +130,6 @@ enum soundmode_t {
     soundmode_16bit_stereo_11025,
     soundmode_16bit_stereo_16000,
     soundmode_16bit_stereo_22050,
-enum keycode_t { 
-
     soundmode_16bit_stereo_44100,
 };
 
