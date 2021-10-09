@@ -59,7 +59,9 @@ void maskblit( int x, int y, unsigned char* source, int width, int height, int s
 void clearscreen( void );
 int getpixel( int x, int y );
 void hline( int x, int y, int len, int color );
-void putpixel( int x, int y, int color );void setcolor( int color );
+void putpixel( int x, int y, int color );
+
+void setcolor( int color );
 int getcolor( void );
 void line( int x1, int y1, int x2, int y2 );
 void rectangle( int x, int y, int w, int h );
@@ -72,9 +74,21 @@ void drawpoly( int* points_xy, int count );
 void fillpoly( int* points_xy, int count );
 void floodfill( int x, int y );
 void boundaryfill( int x, int y, int boundary );
-void outtextxy( int x, int y, char const* text ); void wraptextxy( int x, int y, char const* text, int width ); void centertextxy( int x, int y, char const* text, int width ); 
+
+void outtextxy( int x, int y, char const* text ); 
+void wraptextxy( int x, int y, char const* text, int width ); 
+void centertextxy( int x, int y, char const* text, int width ); 
+
 enum {
-    DEFAULT_FONT_8X8  = 1,    DEFAULT_FONT_8X16 = 2,    DEFAULT_FONT_9X16 = 3,};void settextstyle( int font, int bold, int italic, int underline );int installuserfont( char const* filename ); 
+    DEFAULT_FONT_8X8  = 1,
+    DEFAULT_FONT_8X16 = 2,
+    DEFAULT_FONT_9X16 = 3,
+};
+
+void settextstyle( int font, int bold, int italic, int underline );
+int installuserfont( char const* filename ); 
+
+
 #define MUSIC_CHANNELS 16
 void noteon( int channel, int note, int velocity);
 void noteoff( int channel, int note );
@@ -115,7 +129,8 @@ enum soundmode_t {
     soundmode_16bit_stereo_11025,
     soundmode_16bit_stereo_16000,
     soundmode_16bit_stereo_22050,
-    soundmode_16bit_stereo_32000,
+enum keycode_t { 
+
     soundmode_16bit_stereo_44100,
 };
 
@@ -137,8 +152,10 @@ enum keyenum_t {
     KEY_SELECT, KEY_PRINT, KEY_EXEC, KEY_SNAPSHOT, KEY_INSERT, KEY_DELETE, KEY_HELP, KEY_0, KEY_1, KEY_2, KEY_3, KEY_4, 
     KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J, KEY_K, 
     KEY_L, KEY_M, KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T, KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z, KEY_LWIN, 
-    KEY_RWIN, KEY_APPS, KEY_SLEEP, KEY_NUMPAD0, KEY_NUMPAD1, KEY_NUMPAD2, KEY_NUMPAD3, KEY_NUMPAD4, KEY_NUMPAD5, 
-    KEY_NUMPAD6, KEY_NUMPAD7, KEY_NUMPAD8, KEY_NUMPAD9, KEY_MULTIPLY, KEY_ADD, KEY_SEPARATOR, KEY_SUBTRACT, KEY_DECIMAL, 
+int keystate( enum keycode_t key );
+
+enum keycode_t* readkeys( void );
+
     KEY_DIVIDE, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12, 
     KEY_F13, KEY_F14, KEY_F15, KEY_F16, KEY_F17, KEY_F18, KEY_F19, KEY_F20, KEY_F21, KEY_F22, KEY_F23, KEY_F24, 
     KEY_NUMLOCK, KEY_SCROLL, KEY_LSHIFT, KEY_RSHIFT, KEY_LCONTROL, KEY_RCONTROL, KEY_LMENU, KEY_RMENU, KEY_BROWSER_BACK, 
@@ -329,9 +346,12 @@ struct internals_t {
 
         int current_font;
         int bold;
-        int italic;
-        int underline;
-    } graphics;
+        enum keycode_t* keybuffer;
+
+        enum keycode_t keybuffer0[ 256 ];
+
+        enum keycode_t keybuffer1[ 256 ];
+
 
     struct {
         int x;
@@ -638,7 +658,12 @@ int getcolor( void ) {
     return internals->graphics.color;
 }
 
-int installuserfont( char const* filename ) {    if( internals->graphics.fonts_count >= sizeof( internals->graphics.fonts ) / sizeof( *internals->graphics.fonts ) ) {        return 0;    }    FILE* fp = fopen( filename, "rb" );
+
+int installuserfont( char const* filename ) {
+    if( internals->graphics.fonts_count >= sizeof( internals->graphics.fonts ) / sizeof( *internals->graphics.fonts ) ) {
+        return 0;
+    }
+    FILE* fp = fopen( filename, "rb" );
     if( !fp ) return 0;
     fseek( fp, 0, SEEK_END );
     size_t sz = ftell( fp );
@@ -649,32 +674,80 @@ int getcolor( void ) {
     
     internals->graphics.fonts[ internals->graphics.fonts_count ] = (pixelfont_t*) data;
 
-    return internals->graphics.fonts_count++;}void settextstyle( int font, int bold, int italic, int underline ) {    if( internals->screen.font ) return;
-    if( font >= 1 && font < internals->graphics.fonts_count ) {        internals->graphics.current_font = font;        internals->graphics.bold = bold;        internals->graphics.italic = italic;        internals->graphics.underline = underline;    }}void wraptextxy( int x, int y, char const* text, int wrap_width ) {    if( internals->screen.font ) return;
-    int color = internals->graphics.color;    pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];    PIXELFONT_COLOR* target = internals->screen.buffer;
+    return internals->graphics.fonts_count++;
+}
+
+
+void settextstyle( int font, int bold, int italic, int underline ) {
+    if( internals->screen.font ) return;
+    if( font >= 1 && font < internals->graphics.fonts_count ) {
+        internals->graphics.current_font = font;
+        internals->graphics.bold = bold;
+        internals->graphics.italic = italic;
+        internals->graphics.underline = underline;
+    }
+}
+
+void wraptextxy( int x, int y, char const* text, int wrap_width ) {
+    if( internals->screen.font ) return;
+    int color = internals->graphics.color;
+    pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];
+    PIXELFONT_COLOR* target = internals->screen.buffer;
     int width = internals->screen.width;
     int height = internals->screen.height;
     pixelfont_align_t align = PIXELFONT_ALIGN_LEFT;
     int hspacing = 0;
-	int vspacing = 0;    int limit = -1;    pixelfont_bold_t bold = internals->graphics.bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF;    pixelfont_italic_t italic = internals->graphics.bold ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF;    pixelfont_underline_t underline = internals->graphics.bold ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF;
-    pixelfont_blit( font, x, y, text, (PIXELFONT_COLOR)color, target, width, height, align, wrap_width, hspacing, vspacing, limit, bold,         italic, underline, NULL );}void centertextxy( int x, int y, char const* text, int wrap_width ) {    if( internals->screen.font ) return;
-    int color = internals->graphics.color;    pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];    PIXELFONT_COLOR* target = internals->screen.buffer;
+	int vspacing = 0;
+    int limit = -1;
+    pixelfont_bold_t bold = internals->graphics.bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF;
+    pixelfont_italic_t italic = internals->graphics.bold ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF;
+    pixelfont_underline_t underline = internals->graphics.bold ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF;
+
+    pixelfont_blit( font, x, y, text, (PIXELFONT_COLOR)color, target, width, height, align, wrap_width, hspacing, vspacing, limit, bold, 
+        italic, underline, NULL );
+}
+
+
+void centertextxy( int x, int y, char const* text, int wrap_width ) {
+    if( internals->screen.font ) return;
+    int color = internals->graphics.color;
+    pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];
+    PIXELFONT_COLOR* target = internals->screen.buffer;
     int width = internals->screen.width;
     int height = internals->screen.height;
     pixelfont_align_t align = PIXELFONT_ALIGN_CENTER;
     int hspacing = 0;
-	int vspacing = 0;    int limit = -1;    pixelfont_bold_t bold = internals->graphics.bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF;    pixelfont_italic_t italic = internals->graphics.bold ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF;    pixelfont_underline_t underline = internals->graphics.bold ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF;
-    pixelfont_blit( font, x, y, text, (PIXELFONT_COLOR)color, target, width, height, align, wrap_width, hspacing, vspacing, limit, bold,         italic, underline, NULL );}
+	int vspacing = 0;
+    int limit = -1;
+    pixelfont_bold_t bold = internals->graphics.bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF;
+    pixelfont_italic_t italic = internals->graphics.bold ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF;
+    pixelfont_underline_t underline = internals->graphics.bold ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF;
 
-void outtextxy( int x, int y, char const* text ) {    if( internals->screen.font ) return;
-    int color = internals->graphics.color;    pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];    PIXELFONT_COLOR* target = internals->screen.buffer;
+    pixelfont_blit( font, x, y, text, (PIXELFONT_COLOR)color, target, width, height, align, wrap_width, hspacing, vspacing, limit, bold, 
+        italic, underline, NULL );
+}
+
+
+void outtextxy( int x, int y, char const* text ) {
+    if( internals->screen.font ) return;
+    int color = internals->graphics.color;
+    pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];
+    PIXELFONT_COLOR* target = internals->screen.buffer;
     int width = internals->screen.width;
     int height = internals->screen.height;
     pixelfont_align_t align = PIXELFONT_ALIGN_LEFT;
     int wrap_width = 0;
     int hspacing = 0;
-	int vspacing = 0;    int limit = -1;    pixelfont_bold_t bold = internals->graphics.bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF;    pixelfont_italic_t italic = internals->graphics.bold ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF;    pixelfont_underline_t underline = internals->graphics.bold ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF;
-    pixelfont_blit( font, x, y, text, (PIXELFONT_COLOR)color, target, width, height, align, wrap_width, hspacing, vspacing, limit, bold,         italic, underline, NULL );}
+	int vspacing = 0;
+    int limit = -1;
+    pixelfont_bold_t bold = internals->graphics.bold ? PIXELFONT_BOLD_ON : PIXELFONT_BOLD_OFF;
+    pixelfont_italic_t italic = internals->graphics.bold ? PIXELFONT_ITALIC_ON : PIXELFONT_ITALIC_OFF;
+    pixelfont_underline_t underline = internals->graphics.bold ? PIXELFONT_UNDERLINE_ON : PIXELFONT_UNDERLINE_OFF;
+
+    pixelfont_blit( font, x, y, text, (PIXELFONT_COLOR)color, target, width, height, align, wrap_width, hspacing, vspacing, limit, bold, 
+        italic, underline, NULL );
+}
+
 
 void waitvbl( void ) {
     if( thread_atomic_int_load( &internals->exit_flag ) == 0 ) {
@@ -872,7 +945,8 @@ void hline( int x, int y, int len, int color ) {
 
 void line( int x1, int y1, int x2, int y2 ) {
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;	int dx = x2 - x1;
+    int color = internals->graphics.color;
+	int dx = x2 - x1;
 	dx = dx < 0 ? -dx : dx;
 	int sx = x1 < x2 ? 1 : -1;
 	int dy = y2 - y1;
@@ -899,7 +973,8 @@ void line( int x1, int y1, int x2, int y2 ) {
 
 void rectangle( int x, int y, int w, int h ) {
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;	hline( x, y, w, color );
+    int color = internals->graphics.color;
+	hline( x, y, w, color );
 	hline( x, y + h - 1, w, color );
 	line( x, y, x, y + h );
 	line( x + w - 1, y, x + w - 1, y + h );
@@ -908,7 +983,8 @@ void rectangle( int x, int y, int w, int h ) {
 
 void bar( int x, int y, int w, int h ) {
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;	for( int i = y; i < y + h; ++i ) {
+    int color = internals->graphics.color;
+	for( int i = y; i < y + h; ++i ) {
 		hline( x, i, w, color );
 	}
 }
@@ -916,7 +992,8 @@ void bar( int x, int y, int w, int h ) {
 
 void circle( int x, int y, int r ) {
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;	int f = 1 - r;
+    int color = internals->graphics.color;
+	int f = 1 - r;
 	int dx = 0;
 	int dy = -2 * r;
 	int ix = 0;
@@ -951,7 +1028,8 @@ void circle( int x, int y, int r ) {
 
 void fillcircle( int x, int y, int r ) {       
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;	int f = 1 - r;
+    int color = internals->graphics.color;
+	int f = 1 - r;
 	int dx = 0;
 	int dy = -2 * r;
 	int ix = 0;
@@ -978,7 +1056,8 @@ void fillcircle( int x, int y, int r ) {
 
 void ellipse( int x, int y, int rx, int ry ) {
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;	int asq = rx * rx;
+    int color = internals->graphics.color;
+	int asq = rx * rx;
 	int bsq = ry * ry;
 
 	putpixel( x, y + ry, color );
@@ -1049,7 +1128,8 @@ void ellipse( int x, int y, int rx, int ry ) {
 
 void fillellipse( int x, int y, int rx, int ry ) {
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;	int asq = rx * rx;
+    int color = internals->graphics.color;
+	int asq = rx * rx;
 	int bsq = ry * ry;
 
 	int wx = 0;
@@ -1126,7 +1206,8 @@ void fillpoly( int* points_xy, int count ) {
         return;
     }
 
-    int color = internals->graphics.color;
+    int color = internals->graphics.color;
+
     int min_y = points_xy[ 0 + 1 ];
 	int max_y = min_y;
 
@@ -1209,7 +1290,8 @@ void floodfill( int x, int y ) {
 		{ --sp; Y = sp->y + ( DY = sp->dy ); XL = sp->xl; XR = sp->xr; }
 
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;
+    int color = internals->graphics.color;
+
     /*
 	 * Filled horizontal segment of scanline y for xl<=x<=xr.
 	 * Parent segment was on line y-dy.  dy=1 or -1
@@ -1265,7 +1347,8 @@ void boundaryfill( int x, int y, int boundary ) {
 		{ --sp; Y = sp->y + ( DY = sp->dy ); XL = sp->xl; XR = sp->xr; }
 
     if( internals->screen.font ) return;
-    int color = internals->graphics.color;
+    int color = internals->graphics.color;
+
     /*
 	 * Filled horizontal segment of scanline y for xl<=x<=xr.
 	 * Parent segment was on line y-dy.  dy=1 or -1
@@ -1318,7 +1401,8 @@ void cputs( char const* string ) {
         
         uint16_t ch = (uint16_t) (unsigned char) *string;
         ch |= ( internals->conio.fg & 0xf ) << 8;
-        ch |= ( internals->conio.bg & 0xf ) << 12;
+int keystate( enum keycode_t key ) {
+
 
         ( (uint16_t*)internals->screen.buffer )[ internals->conio.x + internals->conio.y * internals->screen.width ] = ch;
 
@@ -1327,7 +1411,8 @@ void cputs( char const* string ) {
             if( internals->conio.y < internals->screen.height - 1 ) {
                 ++internals->conio.y;
             } else {
-                --internals->conio.x;
+enum keycode_t* readkeys( void ) {
+
                 break;
             }
             internals->conio.x = 0;
@@ -2261,7 +2346,8 @@ static int app_proc( app_t* app, void* user_data ) {
         int aspect_width = (int)( ( scrheight * 4.25f ) / 3 );
         int aspect_height = (int)( ( scrwidth * 3 ) / 4.25f );
         int target_width, target_height;
-        if( aspect_height <= scrheight ) {
+    enum keycode_t keys[ 256 ] = { 0 };
+
             target_width = scrwidth;
             target_height = aspect_height;
         } else {
@@ -2281,7 +2367,8 @@ static int app_proc( app_t* app, void* user_data ) {
     user_thread_context.app_context = app_context;
     user_thread_context.sound_buffer_size = SOUND_BUFFER_SIZE;
     thread_signal_init( &user_thread_context.user_thread_initialized );
-    thread_atomic_int_store( &user_thread_context.user_thread_finished, 0 );
+                        keys[ keys_index++ ] = (enum keycode_t )event->data.key;
+
     thread_signal_init( &user_thread_context.app_loop_finished );
     thread_signal_init( &user_thread_context.user_thread_terminated );
 
@@ -2357,15 +2444,19 @@ static int app_proc( app_t* app, void* user_data ) {
                 int index = (int)event->data.key;
                 if( index > 0 && index < KEYCOUNT ) {
                     keystate[ index ] = true;
-                    if( keys_index < 255 ) {
+        enum keycode_t* internals_keybuffer;
+
                         keys[ keys_index++ ] = (enum keyenum_t)event->data.key;
                     }
                 }
                 if( event->data.key == APP_KEY_F11 ) {
                     fullscreen = !fullscreen;
-                    app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
-                    if( fullscreen ) {
-                        APP_U32 blank = 0;
+        enum keycode_t* keyin = keys;
+
+        enum keycode_t* keyout = internals_keybuffer;
+
+        enum keycode_t* keyend = internals_keybuffer + sizeof( internals->input.keybuffer0 ) / sizeof( *internals->input.keybuffer0 ) - 1;
+
                         app_pointer( app, 1, 1, &blank, 0, 0 );
                     } else {
                         app_pointer( app, pointer_width, pointer_height, pointer_pixels, pointer_hotspot_x, pointer_hotspot_y );
