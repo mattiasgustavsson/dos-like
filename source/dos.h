@@ -2162,7 +2162,7 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
     int in_count = sample_pairs_count;
     
     thread_mutex_lock( &context->mutex );
-    memset( mixbuffer, 0, sample_pairs_count * 2 * sizeof( float) );
+    memset( mixbuffer, 0, SOUND_BUFFER_SIZE * 2 * sizeof( float) );
     for( int i = 0; i < SOUND_CHANNELS; ++i ) {
         if( context->sound_channels[ i ].sound && !context->sound_channels[ i ].done ) {
             float result = mix_sound_channel( context->sound_channels[ i ].sound, context->sound_channels[ i ].loop, 
