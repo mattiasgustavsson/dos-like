@@ -152,6 +152,8 @@ enum keycode_t {
     KEY_SELECT, KEY_PRINT, KEY_EXEC, KEY_SNAPSHOT, KEY_INSERT, KEY_DELETE, KEY_HELP, KEY_0, KEY_1, KEY_2, KEY_3, KEY_4, 
     KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J, KEY_K, 
     KEY_L, KEY_M, KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T, KEY_U, KEY_V, KEY_W, KEY_X, KEY_Y, KEY_Z, KEY_LWIN, 
+    KEY_RWIN, KEY_APPS, KEY_SLEEP, KEY_NUMPAD0, KEY_NUMPAD1, KEY_NUMPAD2, KEY_NUMPAD3, KEY_NUMPAD4, KEY_NUMPAD5, 
+    KEY_NUMPAD6, KEY_NUMPAD7, KEY_NUMPAD8, KEY_NUMPAD9, KEY_MULTIPLY, KEY_ADD, KEY_SEPARATOR, KEY_SUBTRACT, KEY_DECIMAL, 
     KEY_DIVIDE, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12, 
     KEY_F13, KEY_F14, KEY_F15, KEY_F16, KEY_F17, KEY_F18, KEY_F19, KEY_F20, KEY_F21, KEY_F22, KEY_F23, KEY_F24, 
     KEY_NUMLOCK, KEY_SCROLL, KEY_LSHIFT, KEY_RSHIFT, KEY_LCONTROL, KEY_RCONTROL, KEY_LMENU, KEY_RMENU, KEY_BROWSER_BACK, 
@@ -2358,8 +2360,7 @@ static int app_proc( app_t* app, void* user_data ) {
     user_thread_context.app_context = app_context;
     user_thread_context.sound_buffer_size = SOUND_BUFFER_SIZE;
     thread_signal_init( &user_thread_context.user_thread_initialized );
-                        keys[ keys_index++ ] = (enum keycode_t )event->data.key;
-
+    thread_atomic_int_store( &user_thread_context.user_thread_finished, 0 );
     thread_signal_init( &user_thread_context.app_loop_finished );
     thread_signal_init( &user_thread_context.user_thread_terminated );
 
@@ -2435,19 +2436,15 @@ static int app_proc( app_t* app, void* user_data ) {
                 int index = (int)event->data.key;
                 if( index > 0 && index < KEYCOUNT ) {
                     keystate[ index ] = true;
-        enum keycode_t* internals_keybuffer;
-
+                    if( keys_index < 255 ) {
                         keys[ keys_index++ ] = (enum keycode_t)event->data.key;
                     }
                 }
                 if( event->data.key == APP_KEY_F11 ) {
                     fullscreen = !fullscreen;
-        enum keycode_t* keyin = keys;
-
-        enum keycode_t* keyout = internals_keybuffer;
-
-        enum keycode_t* keyend = internals_keybuffer + sizeof( internals->input.keybuffer0 ) / sizeof( *internals->input.keybuffer0 ) - 1;
-
+                    app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
+                    if( fullscreen ) {
+                        APP_U32 blank = 0;
                         app_pointer( app, 1, 1, &blank, 0, 0 );
                     } else {
                         app_pointer( app, pointer_width, pointer_height, pointer_pixels, pointer_hotspot_x, pointer_hotspot_y );
