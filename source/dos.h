@@ -139,6 +139,7 @@ void setsoundmode( enum soundmode_t mode );
 #define SOUND_CHANNELS 16
 struct sound_t;
 struct sound_t* loadwav( char const* filename );
+struct sound_t* createsound( int channels, int samplerate, int framecount, short* samples );
 void playsound( int channel, struct sound_t* sound, int loop, int volume );
 void stopsound( int channel );
 int soundplaying( int channel );
@@ -1712,6 +1713,19 @@ struct sound_t* loadwav( char const* filename ) {
     sound->channels = (int)channels;
     sound->samplerate = (int)samplerate;
     sound->framecount = (int)framecount;
+    return sound;
+}
+
+
+struct sound_t* createsound( int channels, int samplerate, int framecount, short* samples ) {
+    if( channels < 1 || channels > 2 || samplerate < 1000 || samplerate > 44100 || framecount <= 0 || !samples ) {
+        return NULL;
+    }
+    struct sound_t* sound = (struct sound_t*) malloc( sizeof( struct sound_t ) + framecount * channels * sizeof( short ) );
+    memcpy( sound + 1, samples, framecount * channels * sizeof( short ) );
+    sound->channels = channels;
+    sound->samplerate = samplerate;
+    sound->framecount = framecount;
     return sound;
 }
 
