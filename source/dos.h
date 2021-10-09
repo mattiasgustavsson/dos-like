@@ -424,7 +424,6 @@ static void internals_create( int sound_buffer_size ) {
     internals->audio.soundmode = soundmode_8bit_mono_22050;
 }
 
-int shuttingdown( void ) {
 
 static void internals_destroy( void ) {
     for( int i = 1; i < internals->graphics.fonts_count; ++i ) {
