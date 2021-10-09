@@ -13,6 +13,8 @@ before you include this file in *one* C/C++ file to create the implementation.
 #ifndef mus_h
 #define mus_h
 
+#include <stddef.h>
+
 typedef struct mus_t mus_t;
     
 mus_t* mus_create( void const* data, size_t size, void* memctx );
@@ -123,7 +125,7 @@ struct mus_t {
 };
 
 mus_t* mus_create( void const* data, size_t size, void* memctx ) {
-    (void) memctx, size;
+    (void) memctx, (void) size;
     uintptr_t ptr = (uintptr_t) data;
     uint32_t sig = *(uint32_t*) ptr;
     ptr += 4;

@@ -199,13 +199,16 @@ app.h is a single-header library, and does not need any .lib files or other bina
 you just include app.h to get the API declarations. To get the definitions, you must include app.h from *one* single
 C or C++ file, and #define the symbol `APP_IMPLEMENTATION` before you do.
 
-As app.h is meant to be a cross platform library (even though only windows is supported right now), you must also
-define which platform you are running on, like this:
+As app.h is a cross platform library, you must also define which platform you are running on, like this for Windows:
 
     #define APP_IMPLEMENTATION
     #define APP_WINDOWS
     #include "app.h"
 
+Or like this for other platforms:
+    #define APP_IMPLEMENTATION
+    #define APP_SDL
+    #include "app.h"
 
 ### Customization
 
@@ -763,7 +766,7 @@ details.
 #elif defined( APP_SDL )
 
     #include <GL/glew.h>
-    #include <SDL2/SDL_opengl.h>
+    #include "SDL_opengl.h"
     #define APP_GLCALLTYPE GLAPIENTRY
     typedef GLuint APP_GLuint;
     typedef GLsizei APP_GLsizei;
@@ -3323,7 +3326,7 @@ void app_coordinates_bitmap_to_window( app_t* app, int width, int height, int* x
 #include <string.h>
 #include <stdio.h>
 
-#include <SDL2/SDL.h>
+#include "SDL.h"
 
 #ifndef APP_FATAL_ERROR
     #define APP_FATAL_ERROR( ctx, message ) { \

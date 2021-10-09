@@ -430,14 +430,13 @@ char const* dialogactor( void ) {
 
 char const* dialogline( void ) {
     return dialog.dlg[ dialog.current_index ].line;
-    	if( shuttingdown() || *readkeys() == KEY_ESCAPE ) break;
+}
 
 
-
-void wait( int jiffys ) {
+void delay( int jiffys ) {
     for( int i = 0; i < jiffys; ++i ) {
         waitvbl();
-    	if( dos_shutdown() || *readkeys() == KEY_ESCAPE ) break;
+    	if( !shuttingdown() || *readkeys() == KEY_ESCAPE ) break;
         drawsprites();
         swapbuffers();
     }
@@ -540,14 +539,14 @@ void title_screen( void ) {
     int credits = label( spr_index++, -160, 192, "Code, art, music and design by Mattias Gustavsson", COLOR_WHITE );
 
     int face_delay = 6;
-	while( !shuttingdown() ) {
+    int face_move = 0;
 
     int logo_delay = 30;
     int logo_move = 0;
     int credits_delay = 30;
     int credits_move = 0;
 
-	while( !dos_shutdown() ) {
+	while( !shuttingdown() ) {
         waitvbl();
 		if( keystate( KEY_ESCAPE ) ) break; 
 		if( keystate( KEY_SPACE ) ) return;
@@ -643,6 +642,7 @@ int main( int argc, char* argv[] ) {
     label_wrap( speech, 220 );
 
 
+    int shown_intro = 0;
 	int fadeout = 0;
     int fadeout_delay = 120;
     int speech_visible = 1;
@@ -657,14 +657,13 @@ int main( int argc, char* argv[] ) {
 	int has_dish = 0;
 	int has_bulb = 0;
 	int has_battery = 0;	  
-	while( !shuttingdown() && !keystate( KEY_ESCAPE ) ) {
 
     int boat_delay = 0;
     int boat_move = 0;
 
     float anim = 0.0f;
 
-	while( !dos_shutdown() && !keystate( KEY_ESCAPE ) ) {
+	while( !shuttingdown() && !keystate( KEY_ESCAPE ) ) {
 		for( int i = 0; i < objects_count; ++i )
             sprite_origin( objects[ i ], xpos, 0 );
 
@@ -676,7 +675,7 @@ int main( int argc, char* argv[] ) {
 		sprite_pos( treeline, -xpos, sprite_y( treeline ) );			
 
         if( !shown_intro ) {
-            wait( 60 );
+            delay( 60 );
             startdialog( dlg_lets_go_home );
             shown_intro = 1;
         }
@@ -719,7 +718,7 @@ int main( int argc, char* argv[] ) {
 					if( strcmp( flag, "penguin_running" ) == 0 ) {
                         sprite_pos( penguin, 970 + 62, sprite_y( penguin ) );
                         sprite_bitmap( penguin, PENGUIN_WALK );
-						wait( 30 );
+						delay( 30 );
                         float penganim = 0.0f;
                         for( int i = 0; i < 90; ++i ) {
                             waitvbl();
@@ -764,7 +763,7 @@ int main( int argc, char* argv[] ) {
 				if( speech_visible && *readkeys() == KEY_SPACE )  {					
 					speech_visible = 0;
                     label_text( speech, "" ); 
-                    wait( 30 );
+                    delay( 30 );
 					execdialog(); 
                     speech_visible = 1;
 				}

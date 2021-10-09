@@ -148,7 +148,7 @@ void crtemu_pc_coordinates_bitmap_to_window( crtemu_pc_t* crtemu_pc, int width, 
 #else
 
     #include <GL/glew.h>
-    #include <SDL2/SDL_opengl.h>
+    #include "SDL_opengl.h"
     #define CRTEMU_PC_GLCALLTYPE GLAPIENTRY
     
     typedef GLuint CRTEMU_PC_GLuint;

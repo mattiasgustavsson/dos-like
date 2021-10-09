@@ -854,10 +854,14 @@ struct thread_internal_signal_t
 void thread_signal_init( thread_signal_t* signal )
     {
     // Compile-time size check
+    #ifdef _WIN32
     #pragma warning( push )
     #pragma warning( disable: 4214 ) // nonstandard extension used: bit field types other than int
+    #endif
     struct x { char thread_signal_type_too_small : ( sizeof( thread_signal_t ) < sizeof( struct thread_internal_signal_t ) ? 0 : 1 ); };
+    #ifdef _WIN32
     #pragma warning( pop )
+    #endif
     
     struct thread_internal_signal_t* internal = (struct thread_internal_signal_t*) signal;
         

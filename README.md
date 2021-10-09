@@ -6,7 +6,7 @@
 
 dos-like is a programming library/framework, kind of like a tiny game engine, for writing games and programs
 with a similar feel to MS-DOS productions from the early 90s. But rather than writing code that would run on
-a real DOS machine, dos-like is about making programs which runs on modern platforms like Windows, Mac and
+a real DOS machine, dos-like is about making programs which run on modern platforms like Windows, Mac and
 Linux, but which attempts to recreate the look, feel, and sound of old DOS programs. 
 
 It includes a bunch of examples of classic DOS techniques and effects, a few of which can be seen above.
@@ -24,7 +24,7 @@ To start in windowed mode, add the flag -w or --window to the commandline when l
 ## Building
 
 dos-like does not make use of any complicated build systems - a simple command line call to the compiler is
-all that is needed to build both your program and thee engine itself.
+all that is needed to build both your program and the engine itself.
 
 ### Windows
 
@@ -43,28 +43,28 @@ where `stranded.c` should be replaced with the sample you like to build.
 
 ### Mac
 
-To build on Mac (which I don't test myself, but might work):
+To build all samples on Mac, run build_all_macos.sh.
+To build individual samples, do:
 ```
-  clang source/stranded.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+  clang -o stranded.bin source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
 ```
-where `stranded.c` should be replaced with the sample you like to build.
+where `stranded.c` and `stranded.bin` should be replaced with the sample you would like to build.
 
-SDL2 and GLEW are required - if you don't have them installed you can do so by running
+SDL2 and GLEW are required - if you don't have them installed you can do so with Homebrew by running
 ```
   brew install sdl2 glew  
 ```
 ### Linux
 
-To build on Linux (which I don't test myself, but might work):
+To build all samples on Linux, run build_all_linux.sh.
+To build individual samples, do:
 ```
-  gcc source/stranded.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+  gcc -o stranded.bin source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
 ```
-where `stranded.c` should be replaced with the sample you like to build.
+where `stranded.c` and `stranded.bin` should be replaced with the sample you would like to build.
 
-SDL2 and GLEW are required - if you don't have them installed you can do so by running
+SDL2 and GLEW are required - if you don't have them installed you can do so on Ubuntu (or wherever `apt-get` is available) by running
 ```
   sudo apt-get install libsdl2-dev
   sudo apt-get install libglew-dev
 ```
-  
-  

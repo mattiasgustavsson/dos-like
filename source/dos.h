@@ -201,20 +201,28 @@ int mousey( void );
 #include "libs/thread.h"
 #include "libs/tsf.h"
 
+#ifdef APP_WINDOWS
 #pragma warning( push )
 #pragma warning( disable: 4201 )
+#endif
 #include "libs/tml.h"
+#ifdef APP_WINDOWS
 #pragma warning( pop)
+#endif
 
 
+#ifdef APP_WINDOWS
 #pragma warning( push )
 #pragma warning( disable: 4024 )
 #pragma warning( disable: 4047 )
 #pragma warning( disable: 4242 )
 #pragma warning( disable: 4244 )
 #pragma warning( disable: 4701 )
+#endif
 #include "libs/gif_load.h"
+#ifdef APP_WINDOWS
 #pragma warning( pop )
+#endif
 
 #include "libs/awe32rom.h"
 #include "libs/crtframe.h"
@@ -2404,7 +2412,7 @@ static int app_proc( app_t* app, void* user_data ) {
         bool loop;
         int volume;
         int play_counter;
-    } sound_channels[ SOUND_CHANNELS ] = { NULL };
+    } sound_channels[ SOUND_CHANNELS ] = { { NULL } };
     
     enum soundmode_t sound_mode = internals->audio.soundmode;
     int music_play_counter = 0;
@@ -2803,13 +2811,17 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #include "libs/tsf.h"
 
 #define TML_IMPLEMENTATION
+#ifdef APP_WINDOWS
 #pragma warning( push )
 #pragma warning( disable: 4201 )
+#endif
 #define TML_MALLOC tml_mus_custom_malloc
 #define TML_REALLOC tml_mus_custom_realloc
 #define TML_FREE tml_mus_custom_free
 #include "libs/tml.h"
+#ifdef APP_WINDOWS
 #pragma warning( pop)
+#endif
 
 
 
@@ -2842,7 +2854,7 @@ void bin2arr( char const* src, char const* dst, char const* name ) {
 //*** main ***
 
 int main( int argc, char** argv ) {
-    (void) argc, argv;
+    (void) argc, (void) argv;
 
     //bin2arr( "framecol.gif", "crtframecol.h", "crtframecol" );
     //bin2arr( "framealpha.gif", "crtframealpha.h", "crtframealpha" );
