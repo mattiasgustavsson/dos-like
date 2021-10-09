@@ -2842,7 +2842,7 @@ void bin2arr( char const* src, char const* dst, char const* name ) {
 //*** main ***
 
 int main( int argc, char** argv ) {
-    (void) argc, argv;
+    (void) argc, (void) argv;
 
     //bin2arr( "framecol.gif", "crtframecol.h", "crtframecol" );
     //bin2arr( "framealpha.gif", "crtframealpha.h", "crtframealpha" );
