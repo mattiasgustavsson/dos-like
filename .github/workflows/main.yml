@@ -27,7 +27,7 @@ jobs:
         run: brew install sdl2 glew
       - name: build burn
         run: |
-          clang source/burn.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o burn.bin source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
   build-linux-gcc:
     runs-on: ubuntu-18.04
     steps:
@@ -39,4 +39,4 @@ jobs:
           sudo apt-get install -qq libglew-dev
       - name: build burn
         run: |
-          gcc source/burn.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o burn.bin source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
