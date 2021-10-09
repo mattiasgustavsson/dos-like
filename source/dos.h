@@ -1394,8 +1394,7 @@ void cputs( char const* string ) {
         
         uint16_t ch = (uint16_t) (unsigned char) *string;
         ch |= ( internals->conio.fg & 0xf ) << 8;
-int keystate( enum keycode_t key ) {
-
+        ch |= ( internals->conio.bg & 0xf ) << 12;
 
         ( (uint16_t*)internals->screen.buffer )[ internals->conio.x + internals->conio.y * internals->screen.width ] = ch;
 
@@ -1404,8 +1403,7 @@ int keystate( enum keycode_t key ) {
             if( internals->conio.y < internals->screen.height - 1 ) {
                 ++internals->conio.y;
             } else {
-enum keycode_t* readkeys( void ) {
-
+                --internals->conio.x;
                 break;
             }
             internals->conio.x = 0;
