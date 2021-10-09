@@ -85,18 +85,38 @@ jobs:
       - uses: actions/checkout@v1
       - name: install dependencies
         run: brew install sdl2 glew
-      - name: build samples
+      - name: build burn
         run: |
           clang source/burn.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build julia
+        run: |
           clang source/julia.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build mandelbrot
+        run: |
           clang source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build plasma
+        run: |
           clang source/plasma.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build raycast
+        run: |
           clang source/raycast.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build rotozoom
+        run: |
           clang source/rotozoom.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build sound
+        run: |
           clang source/sound.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build stranded
+        run: |
           clang source/stranded.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build tracker
+        run: |
           clang source/tracker.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build tunnel
+        run: |
           clang source/tunnel.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+      - name: build voxel
+        run: |
           clang source/voxel.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
   build-linux-gcc:
     runs-on: ubuntu-18.04
@@ -107,16 +127,36 @@ jobs:
           sudo apt-get update
           sudo apt-get install -qq libsdl2-dev
           sudo apt-get install -qq libglew-dev
-      - name: build samples
+      - name: build burn
         run: |
           gcc source/burn.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build julia
+        run: |
           gcc source/julia.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build mandelbrot
+        run: |
           gcc source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build plasma
+        run: |
           gcc source/plasma.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build raycast
+        run: |
           gcc source/raycast.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build rotozoom
+        run: |
           gcc source/rotozoom.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build sound
+        run: |
           gcc source/sound.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build stranded
+        run: |
           gcc source/stranded.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build tracker
+        run: |
           gcc source/tracker.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build tunnel
+        run: |
           gcc source/tunnel.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+      - name: build voxel
+        run: |
           gcc source/voxel.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
