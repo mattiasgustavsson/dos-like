@@ -341,12 +341,9 @@ struct internals_t {
 
         int current_font;
         int bold;
-        enum keycode_t* keybuffer;
-
-        enum keycode_t keybuffer0[ 256 ];
-
-        enum keycode_t keybuffer1[ 256 ];
-
+        int italic;
+        int underline;
+    } graphics;
 
     struct {
         int x;
@@ -358,9 +355,9 @@ struct internals_t {
 
     struct {
         bool keystate[ KEYCOUNT ];
-        enum keyenum_t* keybuffer;
-        enum keyenum_t keybuffer0[ 256 ];
-        enum keyenum_t keybuffer1[ 256 ];
+        enum keycode_t* keybuffer;
+        enum keycode_t keybuffer0[ 256 ];
+        enum keycode_t keybuffer1[ 256 ];
         char* charbuffer;
         char charbuffer0[ 256 ];
         char charbuffer1[ 256 ];
