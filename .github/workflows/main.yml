@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v1
         # this runs vcvarsall for us, so we get the MSVC toolchain in PATH.
       - uses: seanmiddleditch/gha-setup-vsdevenv@master
-      - name: build burn
+      - name: build samples
         run: |
           cl source/burn.c source/dos.c
           cl source/julia.c source/dos.c
@@ -26,7 +26,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v1
-      - name: build burn
+      - name: build samples
         run: |
           tcc/tcc source/burn.c source/dos.c
   build-macos:
@@ -35,9 +35,19 @@ jobs:
       - uses: actions/checkout@v1
       - name: install dependencies
         run: brew install sdl2 glew
-      - name: build burn
+      - name: build samples
         run: |
           clang source/burn.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/julia.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/plasma.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/raycast.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/rotozoom.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/sound.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/stranded.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/tracker.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/tunnel.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang source/voxel.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
   build-linux-gcc:
     runs-on: ubuntu-18.04
     steps:
@@ -47,6 +57,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -qq libsdl2-dev
           sudo apt-get install -qq libglew-dev
-      - name: build burn
+      - name: build samples
         run: |
           gcc source/burn.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/julia.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/plasma.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/raycast.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/rotozoom.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/sound.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/stranded.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/tracker.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/tunnel.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc source/voxel.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
