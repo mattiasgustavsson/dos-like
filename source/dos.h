@@ -11,6 +11,8 @@ file contains licensing information for the code in that file.
 #ifndef dos_h
 #define dos_h
 
+#include <stdlib.h>
+
 enum videomode_t {
     videomode_40x25_8x8,
     videomode_40x25_9x16,
@@ -139,6 +141,7 @@ void setsoundmode( enum soundmode_t mode );
 #define SOUND_CHANNELS 16
 struct sound_t;
 struct sound_t* loadwav( char const* filename );
+struct sound_t* loadwavbuf( char const* buf, size_t len );
 void playsound( int channel, struct sound_t* sound, int loop, int volume );
 void stopsound( int channel );
 int soundplaying( int channel );
@@ -1702,6 +1705,24 @@ struct sound_t* loadwav( char const* filename ) {
     unsigned int samplerate = 0;
     drwav_uint64 framecount = 0;
     drwav_int16* samples = drwav_open_file_and_read_pcm_frames_s16( filename, &channels, &samplerate, &framecount, NULL);
+    if( samples == NULL || channels <= 0 || channels > 2 || samplerate < 4000 || samplerate > 48000 || framecount == 0 || framecount >= 0x7fffffff ) {
+        if( samples ) {
+            drwav_free( samples, NULL );
+        }
+        return NULL;
+    }
+    struct sound_t* sound = ( (struct sound_t*)samples ) - 1;
+    sound->channels = (int)channels;
+    sound->samplerate = (int)samplerate;
+    sound->framecount = (int)framecount;
+    return sound;
+}
+
+struct sound_t* loadwavbuf( char const* buf, size_t len ) {
+    unsigned int channels = 0;
+    unsigned int samplerate = 0;
+    drwav_uint64 framecount = 0;
+    drwav_int16* samples = drwav_open_memory_and_read_pcm_frames_s16( buf, len, &channels, &samplerate, &framecount, NULL);
     if( samples == NULL || channels <= 0 || channels > 2 || samplerate < 4000 || samplerate > 48000 || framecount == 0 || framecount >= 0x7fffffff ) {
         if( samples ) {
             drwav_free( samples, NULL );
