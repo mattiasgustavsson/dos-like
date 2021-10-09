@@ -6,6 +6,7 @@ gcc -o mandelbrot.bin source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -lGL -lm -l
 gcc -o plasma.bin source/plasma.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
 gcc -o raycast.bin source/raycast.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
 gcc -o rotozoom.bin source/rotozoom.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+gcc -o sound.bin source/sound.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
 gcc -o stranded.bin source/stranded.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
 gcc -o tracker.bin source/tracker.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
 gcc -o tunnel.bin source/tunnel.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
