@@ -1,7 +1,5 @@
 #!/bin/sh
 
-mkdir linux
-
 gcc -o burn.bin source/burn.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
 gcc -o julia.bin source/julia.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
 gcc -o mandelbrot.bin source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
