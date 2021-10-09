@@ -9,35 +9,75 @@ jobs:
       - uses: actions/checkout@v1
         # this runs vcvarsall for us, so we get the MSVC toolchain in PATH.
       - uses: seanmiddleditch/gha-setup-vsdevenv@master
-      - name: build samples
+      - name: build burn
         run: |
           cl source/burn.c source/dos.c
+      - name: build julia
+        run: |
           cl source/julia.c source/dos.c
+      - name: build mandelbrot
+        run: |
           cl source/mandelbrot.c source/dos.c
+      - name: build plasma
+        run: |
           cl source/plasma.c source/dos.c
+      - name: build raycast
+        run: |
           cl source/raycast.c source/dos.c
+      - name: build rotozoom
+        run: |
           cl source/rotozoom.c source/dos.c
+      - name: build sound
+        run: |
           cl source/sound.c source/dos.c
+      - name: build stranded
+        run: |
           cl source/stranded.c source/dos.c
+      - name: build tracker
+        run: |
           cl source/tracker.c source/dos.c
+      - name: build tunnel
+        run: |
           cl source/tunnel.c source/dos.c
+      - name: build voxel
+        run: |
           cl source/voxel.c source/dos.c
   build-windows-tcc:
     runs-on: windows-2019
     steps:
       - uses: actions/checkout@v1
-      - name: build samples
+      - name: build burn
         run: |
           tcc/tcc source/burn.c source/dos.c
+      - name: build julia
+        run: |
           tcc/tcc source/julia.c source/dos.c
+      - name: build mandelbrot
+        run: |
           tcc/tcc source/mandelbrot.c source/dos.c
+      - name: build plasma
+        run: |
           tcc/tcc source/plasma.c source/dos.c
+      - name: build raycast
+        run: |
           tcc/tcc source/raycast.c source/dos.c
+      - name: build rotozoom
+        run: |
           tcc/tcc source/rotozoom.c source/dos.c
+      - name: build sound
+        run: |
           tcc/tcc source/sound.c source/dos.c
+      - name: build stranded
+        run: |
           tcc/tcc source/stranded.c source/dos.c
+      - name: build tracker
+        run: |
           tcc/tcc source/tracker.c source/dos.c
+      - name: build tunnel
+        run: |
           tcc/tcc source/tunnel.c source/dos.c
+      - name: build voxel
+        run: |
           tcc/tcc source/voxel.c source/dos.c
   build-macos:
     runs-on: macOS-latest
