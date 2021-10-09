@@ -12,6 +12,16 @@ jobs:
       - name: build burn
         run: |
           cl source/burn.c source/dos.c
+          cl source/julia.c source/dos.c
+          cl source/mandelbrot.c source/dos.c
+          cl source/plasma.c source/dos.c
+          cl source/raycast.c source/dos.c
+          cl source/rotozoom.c source/dos.c
+          cl source/sound.c source/dos.c
+          cl source/stranded.c source/dos.c
+          cl source/tracker.c source/dos.c
+          cl source/tunnel.c source/dos.c
+          cl source/voxel.c source/dos.c
   build-windows-tcc:
     runs-on: windows-2019
     steps:
