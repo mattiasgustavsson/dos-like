@@ -2158,7 +2158,7 @@ struct sound_context_t {
 
 static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ) {
     struct sound_context_t* context = (struct sound_context_t*) user_data;
-    static float mixbuffer[ SOUND_BUFFER_SIZE * 2 ];
+    static float mixbuffer[ SOUND_BUFFER_SIZE * 10 ];
     int in_count = sample_pairs_count;
     
     thread_mutex_lock( &context->mutex );
@@ -2180,7 +2180,7 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
     int is8bit = context->sound_8bit;
     int ismono = context->sound_mono;
 
-    static float freqbuffer[ SOUND_BUFFER_SIZE * 2 ];
+    static float freqbuffer[ SOUND_BUFFER_SIZE * 10 ];
     float ratio = freq / 44100.0f;
     float outpos = 0.0f;
     for( int i = 0; i < in_count; ++i ) {
