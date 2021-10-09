@@ -152,7 +152,7 @@ int main( int argc, char* argv[] ) {
 
   memset(Scr,0,screenwidth()*screenheight()); /* Clear Screen */
 
-  while( !shutdown() && !keystate( KEY_ESCAPE ) ) {
+  while( !dos_shutdown() && !keystate( KEY_ESCAPE ) ) {
     waitvbl();
     Ch = *readchars();
  

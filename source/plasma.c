@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
   unsigned char* buffer = screenbuffer();
 
   //start the animation loop, it rotates the palette
-  while(!shutdown())
+  while(!dos_shutdown())
   {
     waitvbl();
 

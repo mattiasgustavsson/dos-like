@@ -22,7 +22,7 @@ int main( int argc, char *argv[] ) {
 
     unsigned char* buffer = screenbuffer();
     int angle = 0.0f;
-    while( !shutdown() ) {
+    while( !dos_shutdown() ) {
         waitvbl();
         float s = (float)sin( angle * PI / 180.0f );
         float c = (float)cos( angle * PI / 180.0f );

@@ -38,7 +38,7 @@ void waitvbl( void );
 void setpal( int index, int r, int g, int b );
 void getpal( int index, int* r, int* g, int* b );
 
-int shutdown( void );
+int dos_shutdown( void );
 
 void cputs( char const* string );
 void textcolor( int color );
@@ -423,7 +423,7 @@ static void internals_destroy( void ) {
 }
 
 
-int shutdown( void ) {
+int dos_shutdown( void ) {
     return thread_atomic_int_load( &internals->exit_flag );
 }
 

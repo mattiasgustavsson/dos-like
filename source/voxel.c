@@ -33,7 +33,7 @@ int main( int argc, char* argv[] ) {
     setdoublebuffer( 1 );
     uint8_t* screen = screenbuffer();
 
-    while( !shutdown() ) {
+    while( !dos_shutdown() ) {
         waitvbl();
         clearscreen();        
 

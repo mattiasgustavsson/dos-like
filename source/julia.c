@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
         newIm = 2 * oldRe * oldIm + cIm;
         //if the point is outside the circle with radius 2: stop
         if((newRe * newRe + newIm * newIm) > 4) break;
-        if( keystate( KEY_ESCAPE ) || shutdown() ) exit(0);
+        if( keystate( KEY_ESCAPE ) || dos_shutdown() ) exit(0);
       }
       //draw the pixel
       putpixel(x, y, ( i + 32 ) & 255 );

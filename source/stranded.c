@@ -430,7 +430,7 @@ char const* dialogline( void ) {
 void wait( int jiffys ) {
     for( int i = 0; i < jiffys; ++i ) {
         waitvbl();
-    	if( shutdown() || *readkeys() == KEY_ESCAPE ) break;
+    	if( dos_shutdown() || *readkeys() == KEY_ESCAPE ) break;
         drawsprites();
         swapbuffers();
     }
@@ -539,7 +539,7 @@ void title_screen( void ) {
     int credits_delay = 30;
     int credits_move = 0;
 
-	while( !shutdown() ) {
+	while( !dos_shutdown() ) {
         waitvbl();
 		if( keystate( KEY_ESCAPE ) ) break; 
 		if( keystate( KEY_SPACE ) ) return;
@@ -655,7 +655,7 @@ int main( int argc, char* argv[] ) {
 
     float anim = 0.0f;
 
-	while( !shutdown() && !keystate( KEY_ESCAPE ) ) {
+	while( !dos_shutdown() && !keystate( KEY_ESCAPE ) ) {
 		for( int i = 0; i < objects_count; ++i )
             sprite_origin( objects[ i ], xpos, 0 );
 

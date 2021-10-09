@@ -1299,7 +1299,7 @@ int main( int argc, char* argv[] ) {
 
     struct tracker_t* tracker = tracker_create();
    
-    while( !shutdown() ) {
+    while( !dos_shutdown() ) {
         waitvbl();
         
         tracker_update_play( tracker, 1000000 / 60 );
