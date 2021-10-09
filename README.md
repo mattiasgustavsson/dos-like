@@ -35,7 +35,7 @@ To build on Mac (which I don't test myself, but might work):
 ```
 where `stranded.c` should be replaced with the sample you like to build.
 
-SDL2 and GLEW are required - if you don't have then installed you can do so by running
+SDL2 and GLEW are required - if you don't have them installed you can do so by running
 ```
   brew install sdl2 glew  
 ```
