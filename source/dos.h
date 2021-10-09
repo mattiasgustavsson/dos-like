@@ -439,7 +439,8 @@ static void internals_destroy( void ) {
 }
 
 
-int dos_shutdown( void ) {
+int shuttingdown( void ) {
+
     return thread_atomic_int_load( &internals->exit_flag );
 }
 
