@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
   unsigned char* buffer = screenbuffer();
 
   //begin the loop
-  while(!dos_shutdown())
+  while(!shuttingdown())
   {
     waitvbl();     
     animation += 1.0f / 60.0f;
