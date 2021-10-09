@@ -144,28 +144,28 @@ int main(int argc, char* argv[])
   //load some textures
   int tw, th, palcount;
   uint8_t palette[ 768 ];
-  texture[0] = loadgif( "raycast/eagle.gif", &tw, &th, &palcount, palette );    
-  texture[1] = loadgif( "raycast/redbrick.gif", &tw, &th, &palcount, palette );    
-  texture[2] = loadgif( "raycast/purplestone.gif", &tw, &th, &palcount, palette );    
-  texture[3] = loadgif( "raycast/greystone.gif", &tw, &th, &palcount, palette );    
-  texture[4] = loadgif( "raycast/bluestone.gif", &tw, &th, &palcount, palette );    
-  texture[5] = loadgif( "raycast/mossy.gif", &tw, &th, &palcount, palette );    
-  texture[6] = loadgif( "raycast/wood.gif", &tw, &th, &palcount, palette );    
-  texture[7] = loadgif( "raycast/colorstone.gif", &tw, &th, &palcount, palette );    
+  texture[0] = loadgif( "files/raycast/eagle.gif", &tw, &th, &palcount, palette );    
+  texture[1] = loadgif( "files/raycast/redbrick.gif", &tw, &th, &palcount, palette );    
+  texture[2] = loadgif( "files/raycast/purplestone.gif", &tw, &th, &palcount, palette );    
+  texture[3] = loadgif( "files/raycast/greystone.gif", &tw, &th, &palcount, palette );    
+  texture[4] = loadgif( "files/raycast/bluestone.gif", &tw, &th, &palcount, palette );    
+  texture[5] = loadgif( "files/raycast/mossy.gif", &tw, &th, &palcount, palette );    
+  texture[6] = loadgif( "files/raycast/wood.gif", &tw, &th, &palcount, palette );    
+  texture[7] = loadgif( "files/raycast/colorstone.gif", &tw, &th, &palcount, palette );    
 
-  darktexture[0] = loadgif( "raycast/deagle.gif", &tw, &th, &palcount, palette );    
-  darktexture[1] = loadgif( "raycast/dredbrick.gif", &tw, &th, &palcount, palette );    
-  darktexture[2] = loadgif( "raycast/dpurplestone.gif", &tw, &th, &palcount, palette );    
-  darktexture[3] = loadgif( "raycast/dgreystone.gif", &tw, &th, &palcount, palette );    
-  darktexture[4] = loadgif( "raycast/dbluestone.gif", &tw, &th, &palcount, palette );    
-  darktexture[5] = loadgif( "raycast/dmossy.gif", &tw, &th, &palcount, palette );    
-  darktexture[6] = loadgif( "raycast/dwood.gif", &tw, &th, &palcount, palette );    
-  darktexture[7] = loadgif( "raycast/dcolorstone.gif", &tw, &th, &palcount, palette );    
+  darktexture[0] = loadgif( "files/raycast/deagle.gif", &tw, &th, &palcount, palette );    
+  darktexture[1] = loadgif( "files/raycast/dredbrick.gif", &tw, &th, &palcount, palette );    
+  darktexture[2] = loadgif( "files/raycast/dpurplestone.gif", &tw, &th, &palcount, palette );    
+  darktexture[3] = loadgif( "files/raycast/dgreystone.gif", &tw, &th, &palcount, palette );    
+  darktexture[4] = loadgif( "files/raycast/dbluestone.gif", &tw, &th, &palcount, palette );    
+  darktexture[5] = loadgif( "files/raycast/dmossy.gif", &tw, &th, &palcount, palette );    
+  darktexture[6] = loadgif( "files/raycast/dwood.gif", &tw, &th, &palcount, palette );    
+  darktexture[7] = loadgif( "files/raycast/dcolorstone.gif", &tw, &th, &palcount, palette );    
 
   //load some sprite textures
-  texture[8] = loadgif( "raycast/barrel.gif", &tw, &th, &palcount, palette );    
-  texture[9] = loadgif( "raycast/pillar.gif", &tw, &th, &palcount, palette );    
-  texture[10] = loadgif( "raycast/greenlight.gif", &tw, &th, &palcount, palette );    
+  texture[8] = loadgif( "files/raycast/barrel.gif", &tw, &th, &palcount, palette );    
+  texture[9] = loadgif( "files/raycast/pillar.gif", &tw, &th, &palcount, palette );    
+  texture[10] = loadgif( "files/raycast/greenlight.gif", &tw, &th, &palcount, palette );    
 
   for( int i = 0; i < palcount; ++i ) {
       setpal(i, palette[ 3 * i + 0 ],palette[ 3 * i + 1 ], palette[ 3 * i + 2 ] );

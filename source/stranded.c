@@ -52,37 +52,37 @@ struct {
     unsigned char* pixels[ 20 ];
 } bitmaps[] = {
     { INVALID, NULL },
-    { BACKGROUND, "stranded/background.gif" },
-    { TREELINE, "stranded/treeline.gif" },
-    { FACE, "stranded/face.gif" },
-    { LOGO, "stranded/logo.gif" },
-    { BOAT, "stranded/boat.gif" },
-    { CHAIR, "stranded/chair.gif" },
-    { GUY_CHAIR, "stranded/guychair.gif" },
-    { GUY_IDLE, "stranded/guy_idle.gif" },
-    { GUY_JUMP, "stranded/guy_jump_%04d.gif" },
-    { GUY_LEFT, "stranded/guy_walk_left_%04d.gif" },
-    { GUY_RIGHT, "stranded/guy_walk_right_%04d.gif" },
-    { HUT1, "stranded/hut1.gif" },
-    { HUT2, "stranded/hut2.gif" },
-    { HUT_BOOK, "stranded/hut_book.gif" },
-    { HUT_BOOK_NOBULB, "stranded/hut_book_nobulb.gif" },
-    { HUT_TV, "stranded/hut_tv.gif" },
-    { HUT_TV_NODISH, "stranded/hut_tv_nodish.gif" },
-    { PALMTREE, "stranded/palmtree.gif" },
-    { PENGUIN, "stranded/penguin.gif" },
-    { PENGUIN_BATTERY, "stranded/penguin_battery.gif" },
-    { PENGUIN_WALK, "stranded/penguin_walk_%04d.gif" },
-    { RADIO_BATTERY, "stranded/radio_battery.gif" },
-    { RADIO_BATTERY_DISH, "stranded/radio_battery_dish.gif" },
-    { RADIO_BULB, "stranded/radio_bulb.gif" },
-    { RADIO_BULB_BATTERY, "stranded/radio_bulb_battery.gif" },
-    { RADIO_BULB_DISH, "stranded/radio_bulb_dish.gif" },
-    { RADIO_DISH, "stranded/radio_dish.gif" },
-    { RADIO_FULL, "stranded/radio_full.gif" },
-    { RADIO_NONE, "stranded/radio_none.gif" },
-    { RADIO_SPR, "stranded/radio_spr.gif" },
-    { TREE2, "stranded/tree2.gif" },
+    { BACKGROUND, "files/stranded/background.gif" },
+    { TREELINE, "files/stranded/treeline.gif" },
+    { FACE, "files/stranded/face.gif" },
+    { LOGO, "files/stranded/logo.gif" },
+    { BOAT, "files/stranded/boat.gif" },
+    { CHAIR, "files/stranded/chair.gif" },
+    { GUY_CHAIR, "files/stranded/guychair.gif" },
+    { GUY_IDLE, "files/stranded/guy_idle.gif" },
+    { GUY_JUMP, "files/stranded/guy_jump_%04d.gif" },
+    { GUY_LEFT, "files/stranded/guy_walk_left_%04d.gif" },
+    { GUY_RIGHT, "files/stranded/guy_walk_right_%04d.gif" },
+    { HUT1, "files/stranded/hut1.gif" },
+    { HUT2, "files/stranded/hut2.gif" },
+    { HUT_BOOK, "files/stranded/hut_book.gif" },
+    { HUT_BOOK_NOBULB, "files/stranded/hut_book_nobulb.gif" },
+    { HUT_TV, "files/stranded/hut_tv.gif" },
+    { HUT_TV_NODISH, "files/stranded/hut_tv_nodish.gif" },
+    { PALMTREE, "files/stranded/palmtree.gif" },
+    { PENGUIN, "files/stranded/penguin.gif" },
+    { PENGUIN_BATTERY, "files/stranded/penguin_battery.gif" },
+    { PENGUIN_WALK, "files/stranded/penguin_walk_%04d.gif" },
+    { RADIO_BATTERY, "files/stranded/radio_battery.gif" },
+    { RADIO_BATTERY_DISH, "files/stranded/radio_battery_dish.gif" },
+    { RADIO_BULB, "files/stranded/radio_bulb.gif" },
+    { RADIO_BULB_BATTERY, "files/stranded/radio_bulb_battery.gif" },
+    { RADIO_BULB_DISH, "files/stranded/radio_bulb_dish.gif" },
+    { RADIO_DISH, "files/stranded/radio_dish.gif" },
+    { RADIO_FULL, "files/stranded/radio_full.gif" },
+    { RADIO_NONE, "files/stranded/radio_none.gif" },
+    { RADIO_SPR, "files/stranded/radio_spr.gif" },
+    { TREE2, "files/stranded/tree2.gif" },
 };
 
 
@@ -592,10 +592,10 @@ int main( int argc, char* argv[] ) {
     for( int i = 0; i < palcount; ++i ) {
         setpal(i, palette[ 3 * i + 0 ],palette[ 3 * i + 1 ], palette[ 3 * i + 2 ] );
     }
-    int font = installuserfont( "stranded/volter.fnt" );
+    int font = installuserfont( "files/stranded/volter.fnt" );
     settextstyle( font, 0, 0, 0 );
 
-    playmusic( loadmid( "stranded/stranded.mid" ), 1, 255 );
+    playmusic( loadmid( "files/stranded/stranded.mid" ), 1, 255 );
 
 	title_screen();
   
