@@ -7,7 +7,7 @@
 dos-like is a programming library/framework, kind of like a tiny game engine, for writing games and programs
 with a similar feel to MS-DOS productions from the early 90s. But rather than writing code that would run on
 a real DOS machine, dos-like is about making programs which runs on modern platforms like Windows, Mac and
-Linux, but which attempts to recreat the look, feel, and sound of old DOS programs. 
+Linux, but which attempts to recreate the look, feel, and sound of old DOS programs. 
 
 It includes a bunch of examples of classic DOS techniques and effects, a few of which can be seen above.
 
