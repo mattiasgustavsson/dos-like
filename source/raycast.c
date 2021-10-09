@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
    uint8_t* buffer = screenbuffer();
 
   //start the main loop
-  while(!shutdown())
+  while(!shuttingdown())
   {
     waitvbl();
 #if FLOOR_HORIZONTAL

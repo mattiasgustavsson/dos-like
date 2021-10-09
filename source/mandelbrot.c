@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
       }
       //draw the pixel
       putpixel(x, y, ( i + 32 ) & 255 );
-      if( keystate( KEY_ESCAPE ) || shutdown() ) exit(0);
+      if( keystate( KEY_ESCAPE ) || shuttingdown() ) exit(0);
     }
     swapbuffers();
     zoom += zoomSpd;
