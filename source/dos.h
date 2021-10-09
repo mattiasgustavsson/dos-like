@@ -38,7 +38,8 @@ void waitvbl( void );
 void setpal( int index, int r, int g, int b );
 void getpal( int index, int* r, int* g, int* b );
 
-int shutdown( void );
+int shuttingdown( void );
+
 
 void cputs( char const* string );
 void textcolor( int color );
@@ -443,7 +444,8 @@ static void internals_destroy( void ) {
 }
 
 
-int shutdown( void ) {
+int shuttingdown( void ) {
+
     return thread_atomic_int_load( &internals->exit_flag );
 }
 
@@ -2346,8 +2348,7 @@ static int app_proc( app_t* app, void* user_data ) {
         int aspect_width = (int)( ( scrheight * 4.25f ) / 3 );
         int aspect_height = (int)( ( scrwidth * 3 ) / 4.25f );
         int target_width, target_height;
-    enum keycode_t keys[ 256 ] = { 0 };
-
+        if( aspect_height <= scrheight ) {
             target_width = scrwidth;
             target_height = aspect_height;
         } else {
@@ -2425,7 +2426,7 @@ static int app_proc( app_t* app, void* user_data ) {
     int curs_x = 0;
     int curs_y = 0;
     bool keystate[ KEYCOUNT ] = { 0 };
-    enum keyenum_t keys[ 256 ] = { 0 };
+    enum keycode_t keys[ 256 ] = { 0 };
     char chars[ 256] = { 0 };
     APP_U64 crt_time_us = 0;
     APP_U64 prev_time = app_time_count( app );       

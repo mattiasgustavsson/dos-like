@@ -24,7 +24,7 @@ int main( int argc, char* argv[] ) {
     gotoxy( 0, 11 ); cputs( "0 - Sound mode 5khz 8bit mono" );
     gotoxy( 0, 13 ); cputs( "ESC - quit" );
     cursoff();
-    while( !shutdown() ) {
+    while( !shuttingdown() ) {
         char key = *readchars();
         if( key == '1' ) {
             playmusic( mid, 0, 255 );

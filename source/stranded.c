@@ -251,7 +251,8 @@ struct dialog_t dlg_lets_go_home[] = {
 struct dialog_t dlg_radio_first[] = {
     { "player_radio", "Oh no! There are parts missing!" },
     { "player_radio", "Someone have grabbed the ANTENNA, the BATTERY, and the BULB." },
-    { "player_radio", "I *have* to find them!" },    { "#SetFlag", "looked_at_radio" },
+    { "player_radio", "I *have* to find them!" },
+    { "#SetFlag", "looked_at_radio" },
     { NULL, NULL }
 };
 
@@ -292,7 +293,8 @@ struct dialog_t dlg_radio_bulb_battery[] = {
 
 struct dialog_t dlg_radio_all[] = {
     { "player_radio", "The radio is complete! Now I can go home." },
-    { "player_radio", "MAYDAY! MAYDAY! I AM STRANDED ON AN ISLAND. SEND HELP!" },    { "#SetFlag", "rescued" },
+    { "player_radio", "MAYDAY! MAYDAY! I AM STRANDED ON AN ISLAND. SEND HELP!" },
+    { "#SetFlag", "rescued" },
     { NULL, NULL }
 };
 
@@ -303,7 +305,8 @@ struct dialog_t dlg_hut_tv[] = {
     { "player_hut", "But *I* need it for my radio. So I can call for help and get home." },
     { "tv_guy", "Uh... I *am* very tired, I need to sleep. But I can't stop watching." },
     { "player_hut", "You can have the antenna back later, I only need it to make the transmission." },
-    { "tv_guy", "Ok, go ahead then." },    { "#ClearFlag", "at_hut_tv" },
+    { "tv_guy", "Ok, go ahead then." },
+    { "#ClearFlag", "at_hut_tv" },
     { NULL, NULL }
 };
 
@@ -318,7 +321,8 @@ struct dialog_t dlg_hut_book[] = {
     { "player_hut", "But *I* need it for my radio. So I can call for help and get home." },
     { "book_guy", "I see, I see. Well I am really rather sleepy. But I can not put this book down. Quite the page-turner it is." },
     { "player_hut", "You can have the bulb back later, I only need it to make the transmission." },
-    { "book_guy", "Ah, very well, very well." },    { "#ClearFlag", "at_hut_bulb" },
+    { "book_guy", "Ah, very well, very well." },
+    { "#ClearFlag", "at_hut_bulb" },
     { NULL, NULL }
 };
 
@@ -339,8 +343,10 @@ struct dialog_t dlg_penguin[] = {
     { "player", "What are you even doing here? Aren't you supposed to be on the south pole or something?" },
     { "penguin", "Vacation." },
     { "penguin", "It's about time I got back anyway." },
-    { "penguin", "Don't touch my battery while I'm gone!" },    { "#SetFlag", "penguin_running" },
-    { "player", "Yeah, right." },    { "#SetFlag", "penguin_gone" },
+    { "penguin", "Don't touch my battery while I'm gone!" },
+    { "#SetFlag", "penguin_running" },
+    { "player", "Yeah, right." },
+    { "#SetFlag", "penguin_gone" },
     { NULL, NULL }
 };
 
@@ -424,13 +430,14 @@ char const* dialogactor( void ) {
 
 char const* dialogline( void ) {
     return dialog.dlg[ dialog.current_index ].line;
-}
+    	if( shuttingdown() || *readkeys() == KEY_ESCAPE ) break;
+
 
 
 void wait( int jiffys ) {
     for( int i = 0; i < jiffys; ++i ) {
         waitvbl();
-    	if( shutdown() || *readkeys() == KEY_ESCAPE ) break;
+    	if( dos_shutdown() || *readkeys() == KEY_ESCAPE ) break;
         drawsprites();
         swapbuffers();
     }
@@ -533,13 +540,14 @@ void title_screen( void ) {
     int credits = label( spr_index++, -160, 192, "Code, art, music and design by Mattias Gustavsson", COLOR_WHITE );
 
     int face_delay = 6;
-    int face_move = 0;
+	while( !shuttingdown() ) {
+
     int logo_delay = 30;
     int logo_move = 0;
     int credits_delay = 30;
     int credits_move = 0;
 
-	while( !shutdown() ) {
+	while( !dos_shutdown() ) {
         waitvbl();
 		if( keystate( KEY_ESCAPE ) ) break; 
 		if( keystate( KEY_SPACE ) ) return;
@@ -649,13 +657,14 @@ int main( int argc, char* argv[] ) {
 	int has_dish = 0;
 	int has_bulb = 0;
 	int has_battery = 0;	  
-    int shown_intro = 0;
+	while( !shuttingdown() && !keystate( KEY_ESCAPE ) ) {
+
     int boat_delay = 0;
     int boat_move = 0;
 
     float anim = 0.0f;
 
-	while( !shutdown() && !keystate( KEY_ESCAPE ) ) {
+	while( !dos_shutdown() && !keystate( KEY_ESCAPE ) ) {
 		for( int i = 0; i < objects_count; ++i )
             sprite_origin( objects[ i ], xpos, 0 );
 
