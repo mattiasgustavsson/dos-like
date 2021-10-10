@@ -1185,12 +1185,14 @@ void tracker_draw( struct tracker_t* tracker ) {
     } else {
         cursoff();
     }
-    
-    unsigned char* scr = screenbuffer();
-    int ofs = tracker->mouse_x + tracker->mouse_y * screenwidth();
-    unsigned char v = scr[ ofs * 2 + 1 ];
-    v = ~v;
-    scr[ ofs * 2 + 1 ] = v;
+
+    if( tracker->mouse_x >= 0 && tracker->mouse_x < screenwidth() && tracker->mouse_y >= 0 && tracker->mouse_y < screenheight() ) {    
+        unsigned char* scr = screenbuffer();
+        int ofs = tracker->mouse_x + tracker->mouse_y * screenwidth();
+        unsigned char v = scr[ ofs * 2 + 1 ];
+        v = ~v;
+        scr[ ofs * 2 + 1 ] = v;
+    }
 }
 
 

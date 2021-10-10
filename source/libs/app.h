@@ -3384,14 +3384,13 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
-    app->window = SDL_CreateWindow( "", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 400, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE );
+    app->window = SDL_CreateWindow( "", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 400, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
     if( !app->window )
     {
 //        printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
         goto init_failed;
     }
 
-    SDL_HideWindow( app->window );
     app->has_focus = 1;
     app->volume = 256;
 
