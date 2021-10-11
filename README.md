@@ -26,6 +26,7 @@ To start in windowed mode, add the flag -w or --window to the commandline when l
 dos-like does not make use of any complicated build systems - a simple command line call to the compiler is
 all that is needed to build both your program and the engine itself.
 
+
 ### Windows
 
 Tiny C Compiler for windows is included. To build all samples, run build_all.bat.
@@ -33,35 +34,38 @@ To build individual samples, do:
 ```
   tcc\tcc source\stranded.c source\dos.c
 ```  
-where `stranded.c` should be replaced with the sample you like to build.
+where `stranded.c` should be replaced with the sample you would like to build.
 
 Alternatively, from a Visual Studio Developer Command Prompt, do:
 ```
   cl source\stranded.c source\dos.c
 ```  
-where `stranded.c` should be replaced with the sample you like to build.
+where `stranded.c` should be replaced with the sample you would like to build.
+
 
 ### Mac
 
 To build all samples on Mac, run build_all_macos.sh.
 To build individual samples, do:
 ```
-  clang -o stranded.bin source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+  clang source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
 ```
-where `stranded.c` and `stranded.bin` should be replaced with the sample you would like to build.
+where `stranded.c` should be replaced with the sample you would like to build.
 
 SDL2 and GLEW are required - if you don't have them installed you can do so with Homebrew by running
 ```
   brew install sdl2 glew  
 ```
+
+
 ### Linux
 
 To build all samples on Linux, run build_all_linux.sh.
 To build individual samples, do:
 ```
-  gcc -o stranded.bin source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+  gcc source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
 ```
-where `stranded.c` and `stranded.bin` should be replaced with the sample you would like to build.
+where `stranded.c` should be replaced with the sample you would like to build.
 
 SDL2 and GLEW are required - if you don't have them installed you can do so on Ubuntu (or wherever `apt-get` is available) by running
 ```
