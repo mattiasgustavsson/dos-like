@@ -202,17 +202,17 @@ int mousey( void );
 #include "libs/thread.h"
 #include "libs/tsf.h"
 
-#ifdef APP_WINDOWS
+#ifdef _WIN32
 #pragma warning( push )
 #pragma warning( disable: 4201 )
 #endif
 #include "libs/tml.h"
-#ifdef APP_WINDOWS
+#ifdef _WIN32
 #pragma warning( pop)
 #endif
 
 
-#ifdef APP_WINDOWS
+#ifdef _WIN32
 #pragma warning( push )
 #pragma warning( disable: 4024 )
 #pragma warning( disable: 4047 )
@@ -221,7 +221,7 @@ int mousey( void );
 #pragma warning( disable: 4701 )
 #endif
 #include "libs/gif_load.h"
-#ifdef APP_WINDOWS
+#ifdef _WIN32
 #pragma warning( pop )
 #endif
 
@@ -2825,7 +2825,7 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #include "libs/tsf.h"
 
 #define TML_IMPLEMENTATION
-#ifdef APP_WINDOWS
+#ifdef _WIN32
 #pragma warning( push )
 #pragma warning( disable: 4201 )
 #endif
@@ -2833,7 +2833,7 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #define TML_REALLOC tml_mus_custom_realloc
 #define TML_FREE tml_mus_custom_free
 #include "libs/tml.h"
-#ifdef APP_WINDOWS
+#ifdef _WIN32
 #pragma warning( pop)
 #endif
 
