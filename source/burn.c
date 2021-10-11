@@ -141,7 +141,7 @@ int main( int argc, char* argv[] ) {
     }
   }
   while( !*readkeys() ) waitvbl();
-/**/
+*/
 
   /* Initialize FlameArray */
   for( I=XStart; I<=XEnd; ++I ) {

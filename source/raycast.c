@@ -126,7 +126,7 @@ double dmin( double a, double b ) { return a < b ? a : b; }
 
 int main(int argc, char* argv[])
 {
-  (void) argc, argv;
+  (void) argc, (void) argv;
   double posX = 22.0, posY = 11.5; //x and y start position
   double dirX = -1.0, dirY = 0.0; //initial direction vector
   double planeX = 0.0, planeY = 0.66; //the 2d raycaster version of camera plane

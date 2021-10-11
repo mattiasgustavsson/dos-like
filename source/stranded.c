@@ -436,7 +436,7 @@ char const* dialogline( void ) {
 void delay( int jiffys ) {
     for( int i = 0; i < jiffys; ++i ) {
         waitvbl();
-    	if( shuttingdown() || *readkeys() == KEY_ESCAPE ) break;
+    	  if( shuttingdown() || *readkeys() == KEY_ESCAPE ) break;
         drawsprites();
         swapbuffers();
     }
@@ -642,8 +642,8 @@ int main( int argc, char* argv[] ) {
 
 
 	int fadeout = 0;
-    int fadeout_delay = 120;
-    int speech_visible = 1;
+  int fadeout_delay = 120;
+  int speech_visible = 1;
 	int rescued = 0;
 	int may_stand = 0;
 	int looked_at_radio = 0;
@@ -655,9 +655,9 @@ int main( int argc, char* argv[] ) {
 	int has_dish = 0;
 	int has_bulb = 0;
 	int has_battery = 0;	  
-    int shown_intro = 0;
-    int boat_delay = 0;
-    int boat_move = 0;
+  int shown_intro = 0;
+  int boat_delay = 0;
+  int boat_move = 0;
 
     float anim = 0.0f;
 

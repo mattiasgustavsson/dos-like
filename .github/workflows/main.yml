@@ -87,37 +87,37 @@ jobs:
         run: brew install sdl2 glew
       - name: build burn
         run: |
-          clang source/burn.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o burn.bin source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build julia
         run: |
-          clang source/julia.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o julia.bin source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build mandelbrot
         run: |
-          clang source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o mandelbrot.bin source/mandelbrot.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build plasma
         run: |
-          clang source/plasma.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o plasma.bin source/plasma.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build raycast
         run: |
-          clang source/raycast.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o raycast.bin source/raycast.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build rotozoom
         run: |
-          clang source/rotozoom.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o rotozoom.bin source/rotozoom.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build sound
         run: |
-          clang source/sound.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o sound.bin source/sound.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build stranded
         run: |
-          clang source/stranded.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o stranded.bin source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build tracker
         run: |
-          clang source/tracker.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o tracker.bin source/tracker.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build tunnel
         run: |
-          clang source/tunnel.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o tunnel.bin source/tunnel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build voxel
         run: |
-          clang source/voxel.c source/dos.c -lSDL2 -lGLEW -framework OpenGL
+          clang -o voxel.bin source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
   build-linux-gcc:
     runs-on: ubuntu-18.04
     steps:
@@ -129,34 +129,34 @@ jobs:
           sudo apt-get install -qq libglew-dev
       - name: build burn
         run: |
-          gcc source/burn.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o burn.bin source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build julia
         run: |
-          gcc source/julia.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o julia.bin source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build mandelbrot
         run: |
-          gcc source/mandelbrot.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o mandelbrot.bin source/mandelbrot.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build plasma
         run: |
-          gcc source/plasma.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o plasma.bin source/plasma.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build raycast
         run: |
-          gcc source/raycast.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o raycast.bin source/raycast.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build rotozoom
         run: |
-          gcc source/rotozoom.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o rotozoom.bin source/rotozoom.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build sound
         run: |
-          gcc source/sound.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o sound.bin source/sound.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build stranded
         run: |
-          gcc source/stranded.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o stranded.bin source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build tracker
         run: |
-          gcc source/tracker.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o tracker.bin source/tracker.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build tunnel
         run: |
-          gcc source/tunnel.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o tunnel.bin source/tunnel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build voxel
         run: |
-          gcc source/voxel.c source/dos.c -lSDL2 -lGLEW -lGL -lm -lpthread
+          gcc -o voxel.bin source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
