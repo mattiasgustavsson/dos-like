@@ -42,6 +42,45 @@ jobs:
       - name: build voxel
         run: |
           cl source/voxel.c source/dos.c
+  build-windows-msvc-cpp:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v1
+        # this runs vcvarsall for us, so we get the MSVC toolchain in PATH.
+      - uses: seanmiddleditch/gha-setup-vsdevenv@master
+      - name: build burn
+        run: |
+          cl /Tp source/burn.c /Tp source/dos.c
+      - name: build julia
+        run: |
+          cl /Tp source/julia.c /Tp source/dos.c
+      - name: build mandelbrot
+        run: |
+          cl /Tp source/mandelbrot.c /Tp source/dos.c
+      - name: build plasma
+        run: |
+          cl /Tp source/plasma.c /Tp source/dos.c
+      - name: build raycast
+        run: |
+          cl /Tp source/raycast.c /Tp source/dos.c
+      - name: build rotozoom
+        run: |
+          cl /Tp source/rotozoom.c /Tp source/dos.c
+      - name: build sound
+        run: |
+          cl /Tp source/sound.c /Tp source/dos.c
+      - name: build stranded
+        run: |
+          cl /Tp source/stranded.c /Tp source/dos.c
+      - name: build tracker
+        run: |
+          cl /Tp source/tracker.c /Tp source/dos.c
+      - name: build tunnel
+        run: |
+          cl /Tp source/tunnel.c /Tp source/dos.c
+      - name: build voxel
+        run: |
+          cl /Tp source/voxel.c /Tp source/dos.c
   build-windows-tcc:
     runs-on: windows-2019
     steps:
