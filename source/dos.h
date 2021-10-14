@@ -99,6 +99,7 @@ void setinstrument( int channel, int instrument );
 struct music_t;
 struct music_t* loadmid( char const* filename );
 struct music_t* loadmus( char const* filename );
+struct music_t* loadmod( char const* filename );
 void playmusic( struct music_t* music, int loop, int volume );
 void stopmusic( void );
 int musicplaying( void );
@@ -201,6 +202,9 @@ int mousey( void );
 #include "libs/pixelfont.h"
 #include "libs/thread.h"
 #include "libs/tsf.h"
+
+#define JAR_MOD_IMPLEMENTATION
+#include "libs/jar_mod.h"
 
 #ifdef _WIN32
 #pragma warning( push )
@@ -1595,6 +1599,7 @@ void setinstrument( int channel, int instrument ) {
 enum music_format_t {
     MUSIC_FORMAT_MID,
     MUSIC_FORMAT_MUS,
+    MUSIC_FORMAT_MOD,
 };
 
 
@@ -1645,6 +1650,30 @@ struct music_t* loadmus( char const* filename ) {
     if( !mus ) return NULL;
     struct music_t* music = ( (struct music_t*)mus ) - 1;
     music->format = MUSIC_FORMAT_MUS;
+    return music;
+}
+
+
+struct music_t* loadmod( char const* filename ) {
+   
+    FILE* fp = fopen( filename, "rb" );
+    fseek( fp, 0, SEEK_END );
+    size_t sz = ftell( fp );
+    fseek( fp, 0, SEEK_SET );
+    uint8_t* data = (uint8_t*) malloc( sz + sizeof( struct music_t ) + sizeof( jar_mod_context_t ) );    
+    uint8_t* file = data + sizeof( struct music_t ) + sizeof( jar_mod_context_t );    
+    fread( file, 1, sz, fp );
+    fclose( fp );
+    if( !data ) return NULL;
+    struct music_t* music = (struct music_t*)data;
+    music->format = MUSIC_FORMAT_MOD;
+    jar_mod_context_t* modctx = (jar_mod_context_t*)(music + 1);
+    if( !jar_mod_init( modctx ) || !jar_mod_load( modctx, (void*)file, (int)sz ) ) {
+        free( data );
+        return NULL;
+    }   
+    modctx->modfile = (void*)file;
+    modctx->modfilesize = (int) sz;
     return music;
 }
 
@@ -2181,10 +2210,22 @@ struct sound_context_t {
 static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, void* user_data ) {
     struct sound_context_t* context = (struct sound_context_t*) user_data;
     static float mixbuffer[ SOUND_BUFFER_SIZE * 10 ];
+    static short modbuffer[ SOUND_BUFFER_SIZE * 10 ];
     int in_count = sample_pairs_count;
     
     thread_mutex_lock( &context->mutex );
-    memset( mixbuffer, 0, sample_pairs_count * 2 * sizeof( float) );
+    
+    if( !context->music_done && context->current_music && context->current_music->format == MUSIC_FORMAT_MOD ) {
+        memset( modbuffer, 0, sample_pairs_count * 2 * sizeof( short ) );
+        jar_mod_context_t* modctx = (jar_mod_context_t*)( context->current_music + 1 );        
+        jar_mod_fillbuffer( modctx, modbuffer, sample_pairs_count, NULL );
+        for( int i = 0; i < sample_pairs_count * 2; ++i ) {
+            mixbuffer[ i ] = ( modbuffer[ i ] / 32768.0f ) * ( context->music_volume / 255.0f );
+        }
+    } else {
+        memset( mixbuffer, 0, sample_pairs_count * 2 * sizeof( float) );
+    }
+        
     for( int i = 0; i < SOUND_CHANNELS; ++i ) {
         if( context->sound_channels[ i ].sound && !context->sound_channels[ i ].done ) {
             float result = mix_sound_channel( context->sound_channels[ i ].sound, context->sound_channels[ i ].loop, 
@@ -2616,6 +2657,7 @@ static int app_proc( app_t* app, void* user_data ) {
             tsf_reset( sound_context.soundfont );
             sound_context.current_music = current_music;
             sound_context.loop_music = loop_music;
+            sound_context.music_volume = music_volume;
             tsf_set_volume( sound_context.soundfont, music_volume / 255.0f );
             if( current_music->format == MUSIC_FORMAT_MID ) {
                 sound_context.music_next = (tml_message*)( current_music + 1 );
@@ -2623,10 +2665,13 @@ static int app_proc( app_t* app, void* user_data ) {
                 for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
                     tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
                 }
-            } else {
+            } else if( current_music->format == MUSIC_FORMAT_MUS ) {
                 sound_context.music_next = NULL;
                 mus_t* mus = (mus_t*)( current_music + 1 );
                 mus_restart( mus );
+            } else if( current_music->format == MUSIC_FORMAT_MOD ) {
+                jar_mod_context_t* modctx = (jar_mod_context_t*)( current_music + 1 );        
+                jar_mod_seek_start( modctx );
             }
             sound_context.music_msec = 0.0;
             sound_context.music_done = false;
