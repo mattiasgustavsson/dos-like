@@ -1672,7 +1672,7 @@ struct music_t* loadmod( char const* filename ) {
         free( data );
         return NULL;
     }   
-    modctx->modfile = (void*)file;
+    modctx->modfile = (muchar*)file;
     modctx->modfilesize = (int) sz;
     return music;
 }
