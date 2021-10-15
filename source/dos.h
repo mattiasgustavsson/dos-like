@@ -2438,9 +2438,11 @@ static int app_proc( app_t* app, void* user_data ) {
     }    
 
     crtemu_pc_t* crt = crtemu_pc_create( NULL );
-    APP_U32* frame = load_crt_frame();
-    crtemu_pc_frame( crt, frame, 1024, 1024 );
-    free( frame );
+    #ifndef DISABLE_SCREEN_FRAME
+        APP_U32* frame = load_crt_frame();
+        crtemu_pc_frame( crt, frame, 1024, 1024 );
+        free( frame );
+    #endif
 
     // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
     // even if the user have disabled vsync in their graphics card settings.
@@ -2769,7 +2771,11 @@ static int app_proc( app_t* app, void* user_data ) {
         APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
         prev_time = time;
         crt_time_us += delta_time_us;
-        crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
+        #ifndef DISABLE_SCREEN_FRAME
+            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
+        #else
+            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff000000 );
+        #endif
         app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
     }
 

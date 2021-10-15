@@ -597,7 +597,7 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
         "\n"
         "vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )\n"
 	    "    {\n"
-	    "    tc = tc * vec2(1.035, 0.96) + vec2(-0.0125*0.75, 0.02);\n"
+	    "    tc = tc * vec2(1.035, 0.96) + vec2( mix( -0.018,-0.0125*0.75,use_frame), 0.02);\n"
 		"	tc = tc * 1.2 - 0.1;\n"
 	    "    vec3 s = pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) );\n"
 	    "    return s*vec3(1.25);\n"
@@ -1229,7 +1229,7 @@ void crtemu_pc_coordinates_window_to_bitmap( crtemu_pc_t* crtemu_pc, int width, 
     xp = xp * ( 1.0f - 0.04f ) + 0.04f / 2.0f + 0.003f;
     yp = yp * ( 1.0f - 0.04f ) + 0.04f / 2.0f - 0.001f;
 
-    xp = xp * 1.035f -0.0125f*0.75f;
+    xp = xp * 1.035f - ( crtemu_pc->use_frame == 0.0f ? 0.018f : 0.0125f*0.75f );
     yp = yp * 0.96f + 0.02f;
 
     xp = xp * 1.2f - 0.1f;
