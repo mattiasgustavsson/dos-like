@@ -1,6 +1,7 @@
 #!/bin/sh
 
 clang -o burn.out source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+clang -o edit.out source/edit.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
 clang -o julia.out source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
 clang -o mandelbrot.out source/mandelbrot.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
 clang -o plasma.out source/plasma.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread

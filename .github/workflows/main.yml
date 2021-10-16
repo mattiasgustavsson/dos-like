@@ -12,6 +12,9 @@ jobs:
       - name: build burn
         run: |
           cl source/burn.c source/dos.c
+      - name: build edit
+        run: |
+          cl source/edit.c source/dos.c
       - name: build julia
         run: |
           cl source/julia.c source/dos.c
@@ -51,6 +54,9 @@ jobs:
       - name: build burn
         run: |
           cl /Tp source/burn.c /Tp source/dos.c
+      - name: build edit
+        run: |
+          cl /Tp source/edit.c /Tp source/dos.c
       - name: build julia
         run: |
           cl /Tp source/julia.c /Tp source/dos.c
@@ -88,6 +94,9 @@ jobs:
       - name: build burn
         run: |
           tcc/tcc source/burn.c source/dos.c
+      - name: build edit
+        run: |
+          tcc/tcc source/edit.c source/dos.c
       - name: build julia
         run: |
           tcc/tcc source/julia.c source/dos.c
@@ -127,6 +136,9 @@ jobs:
       - name: build burn
         run: |
           clang source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build edit
+        run: |
+          clang source/edit.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
       - name: build julia
         run: |
           clang source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
@@ -169,6 +181,9 @@ jobs:
       - name: build burn
         run: |
           gcc source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+      - name: build edit
+        run: |
+          gcc source/edit.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build julia
         run: |
           gcc source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread

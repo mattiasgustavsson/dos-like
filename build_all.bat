@@ -1,4 +1,5 @@
 tcc\tcc source\burn.c source\dos.c
+tcc\tcc source\edit.c source\dos.c
 tcc\tcc source\julia.c source\dos.c
 tcc\tcc source\mandelbrot.c source\dos.c
 tcc\tcc source\plasma.c source\dos.c

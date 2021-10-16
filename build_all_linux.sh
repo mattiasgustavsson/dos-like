@@ -1,6 +1,7 @@
 #!/bin/sh
 
 gcc -o burn.out source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+gcc -o edit.out source/edit.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
 gcc -o julia.out source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
 gcc -o mandelbrot.out source/mandelbrot.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
 gcc -o plasma.out source/plasma.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
