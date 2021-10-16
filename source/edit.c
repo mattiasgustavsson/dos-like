@@ -141,7 +141,7 @@ int insertchars( struct str_t* str, int i, char const* ch, int n ) {
         if( str->size + n >= str->capacity ) {
             str->capacity += n;
         }
-        str->chars = realloc( str->chars, str->capacity + 1 ); 
+        str->chars = (char*) realloc( str->chars, str->capacity + 1 ); 
     }
     if( str->size - i > 0 ) {
         memmove( str->chars + i + n, str->chars + i, str->size - i );
@@ -258,6 +258,11 @@ void help( void ) {
     readchars();
     curson();
 }
+
+
+#ifndef _WIN32 
+    #define stricmp strcasecmp
+#endif
 
 
 int main( int argc, char* argv[] ) {
