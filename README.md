@@ -26,7 +26,7 @@ all that is needed to build both your program and the engine itself.
 
 ### Windows
 
-Tiny C Compiler for windows is included. To build all samples, run `build_all.bat`.
+Tiny C Compiler for Windows is included. To build all samples, run `build_all.bat`.
 To build individual samples, do:
 ```
   tcc\tcc source\stranded.c source\dos.c
@@ -53,7 +53,7 @@ SDL2 and GLEW are required - if you don't have them installed you can do so with
 ```
   brew install sdl2 glew  
 ```
-where SDL2 and GLEW gets installed with Homebrew.
+where SDL2 and GLEW gets installed using Homebrew.
 
 
 ### Linux
