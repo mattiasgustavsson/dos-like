@@ -53,7 +53,7 @@ SDL2 and GLEW are required - if you don't have them installed you can do so with
 ```
   brew install sdl2 glew  
 ```
-where SDL2 and GLEW gets installed using Homebrew.
+where SDL2 and GLEW gets installed using Homebrew, or you can use `install_sdl2glew_macos.sh` to install GLEW and SDL2.
 
 
 ### Linux
