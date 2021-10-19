@@ -265,8 +265,13 @@ void help( void ) {
 #endif
 
 
-int main( int argc, char* argv[] ) {
+int main( int argc, char** argv ) {
     setvideomode( videomode_80x25_9x16 );
+	if(argc == 3 && strcmp(argv[1], "-w") == 0) {
+		argv++;
+		argc--;
+	}
+
     if( argc != 2 ) {
         goxy( 0, 0 ); putstring( "Usage:" );
         goxy( 4, 1 ); putstring( "edit filename.ext" );
