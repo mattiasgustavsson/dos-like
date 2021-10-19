@@ -271,24 +271,24 @@ void call_instruct() {
     goxy( 4, 4 ); putstring( "edit source/rotozoom.c" );
     gotoxy( 0, 5 );
     while( !*readkeys() ) waitvbl();
-	exit(1);
+    exit(1);
 }
 
 int main( int argc, char** argv ) {
     setvideomode( videomode_80x25_9x16 );
 
-	if(argc == 1) call_instruct();
+    if(argc == 1) call_instruct();
 
     char const* filename = argv[ 1 ];
 
-	if(strcmp(filename, "-w") == 0 || strcmp(filename, "--window") == 0) {
-		if(argc == 3) {
-			filename = argv[2];
-		}
-		else {
-			call_instruct();
-		}
-	}
+    if(strcmp(filename, "-w") == 0 || strcmp(filename, "--window") == 0) {
+        if(argc == 3) {
+            filename = argv[2];
+        }
+        else {
+            call_instruct();
+        }
+    }
     
     int scrlines = 25;
     if( use_50lines ) {
