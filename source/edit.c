@@ -271,6 +271,9 @@ int main( int argc, char** argv ) {
 		argv++;
 		argc--;
 	}
+	if(argc == 3 && strcmp(argv[2], "-w") == 0) {
+		argc--;
+	}
 
     if( argc != 2 ) {
         goxy( 0, 0 ); putstring( "Usage:" );
