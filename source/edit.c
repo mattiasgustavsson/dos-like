@@ -264,34 +264,37 @@ void help( void ) {
     #define stricmp strcasecmp
 #endif
 
+void call_instruct() {
+    goxy( 0, 0 ); putstring( "Usage:" );
+    goxy( 4, 1 ); putstring( "edit filename.ext" );
+    goxy( 0, 3 ); putstring( "Example:" );
+    goxy( 4, 4 ); putstring( "edit source/rotozoom.c" );
+    gotoxy( 0, 5 );
+    while( !*readkeys() ) waitvbl();
+	exit(1);
+}
 
 int main( int argc, char** argv ) {
     setvideomode( videomode_80x25_9x16 );
-	if(argc == 3 && strcmp(argv[1], "-w") == 0) {
-		argv++;
-		argc--;
-	}
-	if(argc == 3 && strcmp(argv[2], "-w") == 0) {
-		argc--;
-	}
 
-    if( argc != 2 ) {
-        goxy( 0, 0 ); putstring( "Usage:" );
-        goxy( 4, 1 ); putstring( "edit filename.ext" );
-        goxy( 0, 3 ); putstring( "Example:" );
-        goxy( 4, 4 ); putstring( "edit source/rotozoom.c" );
-        gotoxy( 0, 5 );
-        while( !*readkeys() ) waitvbl();
-        return 1;
-    }
+	if(argc == 1) call_instruct();
+
+    char const* filename = argv[ 1 ];
+
+	if(strcmp(filename, "-w") == 0 || strcmp(filename, "--window") == 0) {
+		if(argc == 3) {
+			filename = argv[2];
+		}
+		else {
+			call_instruct();
+		}
+	}
     
     int scrlines = 25;
     if( use_50lines ) {
         setvideomode( videomode_80x50_8x8 );
         scrlines = 50;
-    }
-    
-    char const* filename = argv[ 1 ];
+    }    
     
     int syntax_highlight = 0;
     char const* ext = strrchr( filename, '.' );
