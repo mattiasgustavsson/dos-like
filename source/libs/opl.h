@@ -97,7 +97,7 @@ void opl_render( opl_t* opl, short* sample_pairs, int sample_pairs_count );
 //  'length' bits
 //-------------------------------------------------
 
-inline uint32_t opl_emu_bitfield(uint32_t value, int start, int length )
+uint32_t opl_emu_bitfield(uint32_t value, int start, int length )
 {
 	return (value >> start) & ((1 << length) - 1);
 }
@@ -108,7 +108,7 @@ inline uint32_t opl_emu_bitfield(uint32_t value, int start, int length )
 //  values provided
 //-------------------------------------------------
 
-inline int32_t opl_emu_clamp(int32_t value, int32_t minval, int32_t maxval)
+int32_t opl_emu_clamp(int32_t value, int32_t minval, int32_t maxval)
 {
 	if (value < minval)
 		return minval;
@@ -813,7 +813,7 @@ void opl_emu_generate( struct opl_emu_t* emu,short *output, uint32_t numsamples)
 //  (matching total level LSB)
 //-------------------------------------------------
 
-inline uint32_t opl_emu_opl_key_scale_atten(uint32_t block, uint32_t fnum_4msb)
+uint32_t opl_emu_opl_key_scale_atten(uint32_t block, uint32_t fnum_4msb)
 {
 	// this table uses the top 4 bits of FNUM and are the maximal values
 	// (for when block == 7). Values for other blocks can be computed by
@@ -837,7 +837,7 @@ inline uint32_t opl_emu_opl_key_scale_atten(uint32_t block, uint32_t fnum_4msb)
 //  attenuation value, in 4.8 fixed point format
 //-------------------------------------------------
 
-inline uint32_t opl_emu_abs_sin_attenuation(uint32_t input)
+uint32_t opl_emu_abs_sin_attenuation(uint32_t input)
 {
 	// the values here are stored as 4.8 logarithmic values for 1/4 phase
 	// this matches the internal format of the OPN chip, extracted from the die
@@ -877,7 +877,7 @@ inline uint32_t opl_emu_abs_sin_attenuation(uint32_t input)
 //  linear volume
 //-------------------------------------------------
 
-inline uint32_t opl_emu_attenuation_to_volume(uint32_t input)
+uint32_t opl_emu_attenuation_to_volume(uint32_t input)
 {
 	// the values here are 10-bit mantissas with an implied leading bit
 	// this matches the internal format of the OPN chip, extracted from the die
@@ -937,7 +937,7 @@ inline uint32_t opl_emu_attenuation_to_volume(uint32_t input)
 //  fractional scale factor to decrease by)
 //-------------------------------------------------
 
-inline uint32_t opl_emu_attenuation_increment(uint32_t rate, uint32_t index)
+uint32_t opl_emu_attenuation_increment(uint32_t rate, uint32_t index)
 {
 	static uint32_t const s_increment_table[64] =
 	{
