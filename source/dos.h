@@ -2365,14 +2365,24 @@ static int app_proc( app_t* app, void* user_data ) {
     app_title( app, app_filename( app ) );
 
     bool fullscreen = true;
+   
+    int modargc = 0;
+    char* modargv[ 256 ];
     for( int i = 0; i < app_context->argc; ++i ) {
         if( strcmp( app_context->argv[ i ], "--window" ) == 0 ) {
             fullscreen = false;
         }
         else if( strcmp( app_context->argv[ i ], "-w" ) == 0 ) {
             fullscreen = false;
+        } else {
+            if( modargc >= sizeof( modargv ) / sizeof( *modargv ) ) {
+                break;
+            }
+            modargv[ modargc++ ] = app_context->argv[ i ];
         }
     }
+    app_context->argc = modargc;
+    app_context->argv = modargv;
 
     int pointer_width = 0;
     int pointer_height = 0;
