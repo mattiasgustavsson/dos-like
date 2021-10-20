@@ -117,8 +117,8 @@ inline int32_t opl_emu_clamp(int32_t value, int32_t minval, int32_t maxval)
 	return value;
 }
 
-//#define min(a,b) (((a)<(b))?(a):(b))
-//#define max(a,b) (((a)>(b))?(a):(b))
+#define opl_min(a,b) (((a)<(b))?(a):(b))
+#define opl_max(a,b) (((a)>(b))?(a):(b))
 
 
 // various envelope states
@@ -270,7 +270,7 @@ uint32_t opl_emu_registers_operator_list(uint8_t o1, uint8_t o2, uint8_t o3, uin
 // raw value is 0, and clamping to 63
 uint32_t opl_emu_registers_effective_rate(uint32_t rawrate, uint32_t ksr)
 {
-	return (rawrate == 0) ? 0 : min(rawrate + ksr, 63);
+	return (rawrate == 0) ? 0 : opl_min(rawrate + ksr, 63);
 }
 
 
@@ -820,7 +820,7 @@ inline uint32_t opl_emu_opl_key_scale_atten(uint32_t block, uint32_t fnum_4msb)
 	// subtracting 8 for each block below 7.
 	static uint8_t const fnum_to_atten[16] = { 0,24,32,37,40,43,45,47,48,50,51,52,53,54,55,56 };
 	int32_t result = fnum_to_atten[fnum_4msb] - 8 * (block ^ 7);
-	return max(0, result);
+	return opl_max(0, result);
 }
 
 
@@ -1498,7 +1498,7 @@ uint32_t opl_emu_fm_operator_envelope_attenuation(struct opl_emu_fm_operator* fm
 	result += fmop->m_cache.total_level;
 
 	// clamp to max, apply shift, and return
-	return min(result, 0x3ff);
+	return opl_min(result, 0x3ff);
 }
 
 

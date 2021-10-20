@@ -198,7 +198,7 @@ int mousey( void );
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdbool.h>
 #include <stdint.h>
-
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -1592,7 +1592,9 @@ int installusersoundbank( char const* filename ) {
     if( !pext || strlen( pext ) != 4 ) return 0;
     char ext[4] = { 0 };
     memcpy( ext, pext + 1, 3 );
-    strlwr( ext );
+    ext[0]=tolower(ext[0]);
+    ext[1]=tolower(ext[1]);
+    ext[2]=tolower(ext[2]);
     enum soundbank_type_t type = SOUNDBANK_TYPE_NONE;
     if( strcmp( ext, "sf2" ) == 0 ) {
         type = SOUNDBANK_TYPE_SF2;
