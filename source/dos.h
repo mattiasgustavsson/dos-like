@@ -90,6 +90,15 @@ void settextstyle( int font, int bold, int italic, int underline );
 int installuserfont( char const* filename ); 
 
 
+enum {
+    DEFAULT_SOUNDBANK_AWE32 = 1,
+    DEFAULT_SOUNDBANK_SB16  = 2,
+};
+
+void setsoundbank( int soundbank );
+int installusersoundbank( char const* filename ); 
+
+
 #define MUSIC_CHANNELS 16
 void noteon( int channel, int note, int velocity);
 void noteoff( int channel, int note );
@@ -199,6 +208,7 @@ int mousey( void );
 #include "libs/dr_wav.h"
 #include "libs/frametimer.h"
 #include "libs/mus.h"
+#include "libs/opl.h"
 #include "libs/pixelfont.h"
 #include "libs/thread.h"
 #include "libs/tsf.h"
@@ -326,6 +336,14 @@ struct audio_command_t {
 };
 
 
+enum soundbank_type_t {
+    SOUNDBANK_TYPE_NONE,
+    SOUNDBANK_TYPE_SF2,
+    //SOUNDBANK_TYPE_IBK,
+    SOUNDBANK_TYPE_OP2,
+};
+
+
 struct internals_t {
     thread_mutex_t mutex;
     thread_atomic_int_t exit_flag;
@@ -396,6 +414,15 @@ struct internals_t {
             int volume;
             int play_counter;
         } channels[ SOUND_CHANNELS ];
+        
+        int current_soundbank;
+        int soundbanks_count;
+        struct {
+            enum soundbank_type_t type;
+            tsf* sf2;
+            void* data;
+            size_t size;
+        } soundbanks[ 256 ];
     } audio;
 
 }* internals;
@@ -434,6 +461,17 @@ static void internals_create( int sound_buffer_size ) {
     internals->graphics.fonts[ DEFAULT_FONT_8X16 ] = internals_build_font( font8x16 );
     internals->graphics.fonts[ DEFAULT_FONT_9X16 ] = internals_build_font( font9x16 );
 
+    internals->audio.current_soundbank = DEFAULT_SOUNDBANK_AWE32;
+    internals->audio.soundbanks_count = 3;
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].type = SOUNDBANK_TYPE_SF2;
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2 = tsf_load_memory( awe32rom, sizeof( awe32rom ) );
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].data = NULL;
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].size = 0;
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_SB16 ].type = SOUNDBANK_TYPE_NONE;
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_SB16 ].sf2 = NULL;
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_SB16 ].data = NULL;
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_SB16 ].size = 0;
+
     internals->audio.soundmode = soundmode_8bit_mono_22050;
 }
 
@@ -442,6 +480,13 @@ static void internals_destroy( void ) {
     for( int i = 1; i < internals->graphics.fonts_count; ++i ) {
         if( internals->graphics.fonts[ i ] ) {
             free( internals->graphics.fonts[ i ] );
+        }
+    }
+    for( int i = 1; i < internals->audio.soundbanks_count; ++i ) {
+        if( internals->audio.soundbanks[ i ].data ) {
+            free( internals->audio.soundbanks[ i ].data );
+        } else if( internals->audio.soundbanks[ i ].sf2 ) {
+            tsf_close( internals->audio.soundbanks[ i ].sf2 );
         }
     }
     thread_signal_term( &internals->vbl.signal );
@@ -1532,6 +1577,57 @@ int mousey( void ) {
 }
 
 
+void setsoundbank( int soundbank ) {
+    if( soundbank >= 1 && soundbank < internals->audio.soundbanks_count ) {
+        internals->audio.current_soundbank = soundbank;
+    }
+}
+
+
+int installusersoundbank( char const* filename ) {
+    if( internals->audio.soundbanks_count >= sizeof( internals->audio.soundbanks ) / sizeof( *internals->audio.soundbanks ) ) {
+        return 0;
+    }
+    char const* pext = strrchr( filename, '.' );
+    if( !pext || strlen( pext ) != 4 ) return 0;
+    char ext[4] = { 0 };
+    memcpy( ext, pext + 1, 3 );
+    strlwr( ext );
+    enum soundbank_type_t type = SOUNDBANK_TYPE_NONE;
+    if( strcmp( ext, "sf2" ) == 0 ) {
+        type = SOUNDBANK_TYPE_SF2;
+    //} else if( strcmp( ext, "ibk" ) == 0 ) {
+    //    type = SOUNDBANK_TYPE_IBK;
+    } else if( strcmp( ext, "op2" ) == 0 ) {
+        type = SOUNDBANK_TYPE_OP2;
+    }
+    if( type == SOUNDBANK_TYPE_NONE ) return 0;
+
+    FILE* fp = fopen( filename, "rb" );
+    if( !fp ) return 0;
+    fseek( fp, 0, SEEK_END );
+    size_t sz = ftell( fp );
+    fseek( fp, 0, SEEK_SET );
+    void* data = malloc( sz );
+    fread( data, 1, sz, fp );
+    fclose( fp );
+    
+    internals->audio.soundbanks[ internals->audio.soundbanks_count ].type = type;
+    if( type == SOUNDBANK_TYPE_SF2 ) {
+        internals->audio.soundbanks[ internals->audio.soundbanks_count ].sf2 = tsf_load_memory( data, sz );
+        internals->audio.soundbanks[ internals->audio.soundbanks_count ].data = NULL;
+        internals->audio.soundbanks[ internals->audio.soundbanks_count ].size = 0;
+        free( data );
+    } else {
+        internals->audio.soundbanks[ internals->audio.soundbanks_count ].sf2 = NULL;
+        internals->audio.soundbanks[ internals->audio.soundbanks_count ].data = data;
+        internals->audio.soundbanks[ internals->audio.soundbanks_count ].size = sz;
+    }
+
+    return internals->audio.soundbanks_count++;
+}
+
+
 void noteon( int channel, int note, int velocity) {
     if( channel < 0 || channel > MUSIC_CHANNELS || note < 0 || note > 127 || velocity < 0 || velocity > 127 ) return;
     struct audio_command_t command;
@@ -1983,7 +2079,7 @@ void initsoundmode( enum soundmode_t mode, int* freq, bool* is8bit, bool* mono )
 }
 
 
-tml_message* render_mid( struct music_t* mid, tml_message* next, double* msec, int loop, APP_S16* sample_pairs, int sample_pairs_count, tsf* soundfont ) {
+tml_message* render_mid_tsf( struct music_t* mid, tml_message* next, double* msec, int loop, APP_S16* sample_pairs, int sample_pairs_count, tsf* soundfont ) {
 	int SampleBlock, SampleCount = sample_pairs_count;
 	for (SampleBlock = 64; SampleCount; SampleCount -= SampleBlock, sample_pairs += (SampleBlock *2)) {
 		if (SampleBlock > SampleCount) SampleBlock = SampleCount;
@@ -2008,7 +2104,6 @@ tml_message* render_mid( struct music_t* mid, tml_message* next, double* msec, i
 			}
 		}
 
-		// Render the block of audio samples in float format
 		tsf_render_short( soundfont, sample_pairs, SampleBlock, 1 );
         if( next == NULL ) {
             if( loop ) {
@@ -2023,7 +2118,46 @@ tml_message* render_mid( struct music_t* mid, tml_message* next, double* msec, i
 }
 
 
-int render_mus( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, int sample_pairs_count, tsf* soundfont ) {
+tml_message* render_mid_opl( struct music_t* mid, tml_message* next, double* msec, int loop, APP_S16* sample_pairs, int sample_pairs_count, opl_t* opl ) {
+	int SampleBlock, SampleCount = sample_pairs_count;
+	for (SampleBlock = 64; SampleCount; SampleCount -= SampleBlock, sample_pairs += (SampleBlock *2)) {
+		if (SampleBlock > SampleCount) SampleBlock = SampleCount;
+
+		for ((*msec) += SampleBlock * (1000.0 / 44100.0); next && (*msec) >= next->time; next = next->next) {
+			switch (next->type) {
+				case TML_PROGRAM_CHANGE: //channel program (preset) change (special handling for 10th MIDI channel with drums)
+                    opl_midi_changeprog( opl, next->channel, next->program );
+					break;
+				case TML_NOTE_ON: //play a note
+					opl_midi_noteon(opl, next->channel, next->key, next->velocity);
+					break;
+				case TML_NOTE_OFF: //stop a note
+					opl_midi_noteoff(opl, next->channel, next->key);
+					break;
+				case TML_PITCH_BEND: //pitch wheel modification
+					opl_midi_pitchwheel(opl, next->channel, ( next->pitch_bend - 8192 ) / 64 );
+					break;
+				case TML_CONTROL_CHANGE: //MIDI controller messages
+                    opl_midi_controller( opl, next->channel, next->control, next->control_value );
+					break;
+			}
+		}
+
+		opl_render( opl, sample_pairs, SampleBlock );
+        if( next == NULL ) {
+            if( loop ) {
+                next = (tml_message*)( mid + 1 );
+                (*msec) = 0.0;
+            } else {
+                return NULL;
+            }
+        }
+	}
+    return next;
+}
+
+
+int render_mus_tsf( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, int sample_pairs_count, tsf* soundfont ) {
     int left_over_from_previous = left_over;
     int remaining = sample_pairs_count;
     APP_S16* output = sample_pairs;
@@ -2141,6 +2275,124 @@ int render_mus( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, int 
 }
 
 
+int render_mus_opl( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, int sample_pairs_count, opl_t* opl ) {
+    int left_over_from_previous = left_over;
+    int remaining = sample_pairs_count;
+    APP_S16* output = sample_pairs;
+    left_over = 0;
+    if( left_over_from_previous ) {
+        int count = left_over_from_previous ;
+        if( count > remaining ) {
+            left_over = count - remaining;
+            count = remaining;
+        }
+        opl_render( opl, output, count );
+        remaining -= count;
+        output += count * 2;
+    }
+    if( left_over ) {
+        return left_over;
+    }
+
+    while( remaining ) {
+        mus_event_t event;
+        mus_next_event( mus, &event );
+        if( event.channel == 15 ) {
+             event.channel = 9;
+        } else if( event.channel == 9 ) {
+            event.channel = 15;
+        }
+        switch( event.cmd ) {
+            case MUS_CMD_RELEASE_NOTE: {
+                opl_midi_noteoff( opl, event.channel, event.data.release_note.note );
+            } break;
+            case MUS_CMD_PLAY_NOTE: {
+                opl_midi_noteon( opl, event.channel, event.data.play_note.note, event.data.play_note.volume );
+            } break;
+            case MUS_CMD_PITCH_BEND: {
+                opl_midi_pitchwheel( opl, event.channel, event.data.pitch_bend.bend_amount - 0x80 );
+            } break;
+            case MUS_CMD_SYSTEM_EVENT: {
+                switch( event.data.system_event.event ) {
+                    case MUS_SYSTEM_EVENT_ALL_SOUNDS_OFF: {
+                        opl_midi_controller( opl, event.channel, 120, 0 );
+                    } break;
+                    case MUS_SYSTEM_EVENT_ALL_NOTES_OFF: {
+                        opl_midi_controller( opl, event.channel, 123, 0 );
+                    } break;
+                    case MUS_SYSTEM_EVENT_MONO: {
+                        // Not supported
+                    } break;
+                    case MUS_SYSTEM_EVENT_POLY: {
+                        // Not supported
+                    } break;
+                    case MUS_SYSTEM_EVENT_RESET_ALL_CONTROLLERS: {
+                        // Not supported
+                    } break;
+                }
+            } break;
+            case MUS_CMD_CONTROLLER: {
+                int value = event.data.controller.value;
+                switch( event.data.controller.controller ) {
+                    case MUS_CONTROLLER_CHANGE_INSTRUMENT: {
+                        opl_midi_changeprog( opl, event.channel, value );
+                    } break;
+                    case MUS_CONTROLLER_BANK_SELECT: {
+                        // Not supported
+                    } break;
+                    case MUS_CONTROLLER_MODULATION: {
+                        // Not supported
+                    } break;
+                    case MUS_CONTROLLER_VOLUME: {
+                        opl_midi_controller( opl, event.channel, 11, value );
+                    } break;
+                    case MUS_CONTROLLER_PAN: {
+                        // Not supported
+                    } break;
+                    case MUS_CONTROLLER_EXPRESSION: {
+                        // Not supported
+                    } break;
+                    case MUS_CONTROLLER_REVERB_DEPTH: {
+                        // Not supported
+                    } break;
+                    case MUS_CONTROLLER_CHORUS_DEPTH: {
+                        // Not supported
+                    } break;
+                    case MUS_CONTROLLER_SUSTAIN_PEDAL: {
+                        // Not supported
+                    } break;
+                    case MUS_CONTROLLER_SOFT_PEDAL: {
+                        // Not supported
+                    } break;
+                }
+            } break;
+            case MUS_CMD_END_OF_MEASURE: {
+                // Not used
+            } break;
+            case MUS_CMD_FINISH: {
+                if( loop ) {
+                    mus_restart( mus );
+                } else {
+                    memset( output, 0, remaining * 2 * sizeof( float ) );
+                    return -1;
+                }
+            } break;
+            case MUS_CMD_RENDER_SAMPLES: {
+                int count = event.data.render_samples.samples_count;
+                if( count > remaining ) {
+                    left_over = count - remaining;
+                    count = remaining;
+                }
+                opl_render( opl, output, count );
+                remaining -= count;
+                output += count * 2;
+            } break;
+        }
+    }
+    return left_over;
+}
+
+
 float mix_sound_channel( struct sound_t* sound, bool loop, float volume, float position, float* sample_pairs, int sample_pairs_count ) {
     float ratio = sound->samplerate / 44100.0f;
     int16_t* samples = (int16_t*)( sound + 1 );
@@ -2184,6 +2436,7 @@ float soft_clipping( float s ) {
 struct sound_context_t {
     thread_mutex_t mutex;
     tsf* soundfont;
+    opl_t* opl;
     int commands_count;
     struct audio_command_t commands[ 512 ];
     struct music_t* current_music;
@@ -2280,8 +2533,21 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
 
 
     if( !context->music_done && context->current_music && context->current_music->format == MUSIC_FORMAT_MUS ) {
-        int result = render_mus( (mus_t*)( context->current_music + 1 ), context->left_over, 
-            context->loop_music, sample_pairs, sample_pairs_count, context->soundfont );
+        int result = 0;
+        if( context->soundfont ) {
+            result = render_mus_tsf( (mus_t*)( context->current_music + 1 ), context->left_over, 
+                context->loop_music, sample_pairs, sample_pairs_count, context->soundfont );
+        } else {
+            result = render_mus_opl( (mus_t*)( context->current_music + 1 ), context->left_over, 
+                context->loop_music, modbuffer, sample_pairs_count, context->opl );
+            for( int i = 0; i < sample_pairs_count * 2; ++i ) {
+                int s = ( modbuffer[ i ] );
+                s += sample_pairs[ i ];
+                if( s > 32700 ) s = 32700;
+                if( s < -32700 ) s = -32700;
+                sample_pairs[ i ] = (short)( s );
+            }
+        }
         if( result >= 0 ) {
             context->left_over = result;
         } else {
@@ -2289,43 +2555,103 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
             context->left_over = 0;;
         }
     } else if( !context->music_done && context->current_music && context->current_music->format == MUSIC_FORMAT_MID ) {
-        context->music_next = render_mid( context->current_music, context->music_next, &context->music_msec, 
-            context->loop_music, sample_pairs, sample_pairs_count, context->soundfont );
+        if( context->soundfont ) {
+            context->music_next = render_mid_tsf( context->current_music, context->music_next, &context->music_msec, 
+                context->loop_music, sample_pairs, sample_pairs_count, context->soundfont );
+        } else {
+            context->music_next = render_mid_opl( context->current_music, context->music_next, &context->music_msec, 
+                context->loop_music, modbuffer, sample_pairs_count, context->opl );
+            for( int i = 0; i < sample_pairs_count * 2; ++i ) {
+                int s = ( modbuffer[ i ] );
+                s += sample_pairs[ i ];
+                if( s > 32700 ) s = 32700;
+                if( s < -32700 ) s = -32700;
+                sample_pairs[ i ] = (short)( s );
+            }
+        }
         if( context->music_next == NULL ) {
             context->music_done = true;
         }        
     } else {
-        if( context->commands_count > 0 ) {
-            int current_stamp = context->commands[ 0 ].frame_stamp;
-            for( int i = 0; i < context->commands_count; ++i ) {
-                struct audio_command_t* cmd = &context->commands[ i ];
-                if( cmd->frame_stamp != current_stamp ) {
-                    if( sample_pairs_count > 0 ) {
-                        tsf_render_short( context->soundfont, sample_pairs, 735, 1 );
+        if( context->soundfont ) {
+            if( context->commands_count > 0 ) {
+                int current_stamp = context->commands[ 0 ].frame_stamp;
+                for( int i = 0; i < context->commands_count; ++i ) {
+                    struct audio_command_t* cmd = &context->commands[ i ];
+                    if( cmd->frame_stamp != current_stamp ) {
+                        if( sample_pairs_count > 0 ) {
+                            tsf_render_short( context->soundfont, sample_pairs, 735, 1 );
+                        }
+                        sample_pairs += 2 * 735;
+                        sample_pairs_count -= 735;
+                        current_stamp = cmd->frame_stamp;
                     }
-                    sample_pairs += 2 * 735;
-                    sample_pairs_count -= 735;
-                    current_stamp = cmd->frame_stamp;
-                }
-                switch( cmd->type ) {
-                    case AUDIO_COMMAND_NOTE_ON:
-                        tsf_channel_note_on( context->soundfont, cmd->channel, cmd->note, cmd->velocity / 127.0f );
-                        break;
-                    case AUDIO_COMMAND_NOTE_OFF:
-                        tsf_channel_note_off( context->soundfont, cmd->channel, cmd->note );
-                        break;
-                    case AUDIO_COMMAND_NOTE_OFF_ALL:
-                        tsf_channel_note_off_all( context->soundfont, cmd->channel );
-                        break;
-                    case AUDIO_COMMAND_SET_INSTRUMENT:
-                        tsf_channel_set_presetnumber( context->soundfont, cmd->channel, cmd->instrument, 
-                            cmd->instrument == 128 ? 1 : 0 );
-                        break;
+                    switch( cmd->type ) {
+                        case AUDIO_COMMAND_NOTE_ON:
+                            tsf_channel_note_on( context->soundfont, cmd->channel, cmd->note, cmd->velocity / 127.0f );
+                            break;
+                        case AUDIO_COMMAND_NOTE_OFF:
+                            tsf_channel_note_off( context->soundfont, cmd->channel, cmd->note );
+                            break;
+                        case AUDIO_COMMAND_NOTE_OFF_ALL:
+                            tsf_channel_note_off_all( context->soundfont, cmd->channel );
+                            break;
+                        case AUDIO_COMMAND_SET_INSTRUMENT:
+                            tsf_channel_set_presetnumber( context->soundfont, cmd->channel, cmd->instrument, 
+                                cmd->instrument == 128 ? 1 : 0 );
+                            break;
+                    }
                 }
             }
-        }
-        if( sample_pairs_count > 0 ) {
-            tsf_render_short( context->soundfont, sample_pairs, sample_pairs_count, 1 );
+            if( sample_pairs_count > 0 ) {
+                tsf_render_short( context->soundfont, sample_pairs, sample_pairs_count, 1 );
+            }
+        } else {
+            if( context->commands_count > 0 ) {
+                int current_stamp = context->commands[ 0 ].frame_stamp;
+                for( int i = 0; i < context->commands_count; ++i ) {
+                    struct audio_command_t* cmd = &context->commands[ i ];
+                    if( cmd->frame_stamp != current_stamp ) {
+                        if( sample_pairs_count > 0 ) {
+                            opl_render( context->opl, modbuffer, 735 );
+                            for( int i = 0; i < 735 * 2; ++i ) {
+                                int s = ( modbuffer[ i ] );
+                                s += sample_pairs[ i ];
+                                if( s > 32700 ) s = 32700;
+                                if( s < -32700 ) s = -32700;
+                                sample_pairs[ i ] = (short)( s );
+                            }
+                        }
+                        sample_pairs += 2 * 735;
+                        sample_pairs_count -= 735;
+                        current_stamp = cmd->frame_stamp;
+                    }
+                    switch( cmd->type ) {
+                        case AUDIO_COMMAND_NOTE_ON:
+                            opl_midi_noteon( context->opl, cmd->channel, cmd->note, cmd->velocity );
+                            break;
+                        case AUDIO_COMMAND_NOTE_OFF:
+                            opl_midi_noteoff( context->opl, cmd->channel, cmd->note );
+                            break;
+                        case AUDIO_COMMAND_NOTE_OFF_ALL:
+                            opl_midi_controller( context->opl, cmd->channel, 123, 0 );
+                            break;
+                        case AUDIO_COMMAND_SET_INSTRUMENT:
+                            opl_midi_changeprog( context->opl, cmd->channel, cmd->instrument );
+                            break;
+                    }
+                }
+            }
+            if( sample_pairs_count > 0 ) {
+                opl_render( context->opl, modbuffer, sample_pairs_count );
+                for( int i = 0; i < sample_pairs_count * 2; ++i ) {
+                    int s = ( modbuffer[ i ] );
+                    s += sample_pairs[ i ];
+                    if( s > 32700 ) s = 32700;
+                    if( s < -32700 ) s = -32700;
+                    sample_pairs[ i ] = (short)( s );
+                }
+            }
         }
     }
     context->commands_count = 0;
@@ -2463,7 +2789,8 @@ static int app_proc( app_t* app, void* user_data ) {
     struct sound_context_t sound_context;
     memset( &sound_context, 0, sizeof( sound_context ) );
     thread_mutex_init( &sound_context.mutex );
-    sound_context.soundfont = tsf_load_memory( awe32rom, sizeof( awe32rom ) );
+    sound_context.soundfont = internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2;
+    sound_context.opl = opl_create();
     sound_context.commands_count = 0;
     sound_context.current_music = NULL;
     sound_context.loop_music = false;
@@ -2485,6 +2812,7 @@ static int app_proc( app_t* app, void* user_data ) {
     int music_play_counter = 0;
 
     // Main loop
+    int previous_soundbank = internals->audio.current_soundbank;
     static APP_U32 screen_xbgr[ sizeof( internals->screen.buffer0 ) ];
     int width = 0;
     int height = 0;
@@ -2650,6 +2978,8 @@ static int app_proc( app_t* app, void* user_data ) {
 
         sound_mode = internals->audio.soundmode;
 
+        int current_soundbank = internals->audio.current_soundbank;
+
         thread_mutex_unlock( &internals->mutex );
 
         // Signal to the game that the frame is completed, and that we are just starting the next one
@@ -2658,6 +2988,28 @@ static int app_proc( app_t* app, void* user_data ) {
 
         // Process audio commands
         thread_mutex_lock( &sound_context.mutex );
+        if( previous_soundbank != current_soundbank ) {
+            enum soundbank_type_t type = internals->audio.soundbanks[ current_soundbank ].type;
+            if( type == SOUNDBANK_TYPE_SF2 ) {
+                sound_context.soundfont = internals->audio.soundbanks[ current_soundbank ].sf2;
+                tsf_reset( sound_context.soundfont );
+                for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
+                    tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+                }
+            //} else if( type == SOUNDBANK_TYPE_IBK ) {
+            //    opl_loadbank_ibk( sound_context.opl, internals->audio.soundbanks[ current_soundbank ].data, internals->audio.soundbanks[ current_soundbank ].size );
+            //    sound_context.soundfont = NULL;
+            } else if( type == SOUNDBANK_TYPE_OP2 ) {
+                opl_loadbank_op2( sound_context.opl, internals->audio.soundbanks[ current_soundbank ].data, internals->audio.soundbanks[ current_soundbank ].size );
+                sound_context.soundfont = NULL;
+            } else if( type == SOUNDBANK_TYPE_NONE ) {
+                opl_destroy( sound_context.opl );
+                sound_context.opl = opl_create();
+                sound_context.soundfont = NULL;
+            }
+            sound_context.music_play_counter--;
+            previous_soundbank = current_soundbank;
+        }
         for( int i = 0; i < audio_commands_count; ++i ) {
             if( sound_context.commands_count >= sizeof( sound_context.commands ) / sizeof( *sound_context.commands ) ) {
                 break;
@@ -2666,16 +3018,24 @@ static int app_proc( app_t* app, void* user_data ) {
         }
 
         if( current_music && sound_context.music_play_counter != music_play_counter ) {
-            tsf_reset( sound_context.soundfont );
+            if( sound_context.soundfont ) {
+                tsf_reset( sound_context.soundfont );
+                tsf_set_volume( sound_context.soundfont, music_volume / 255.0f );
+            } else {
+                opl_clear( sound_context.opl );
+            }
             sound_context.current_music = current_music;
             sound_context.loop_music = loop_music;
             sound_context.music_volume = music_volume;
-            tsf_set_volume( sound_context.soundfont, music_volume / 255.0f );
             if( current_music->format == MUSIC_FORMAT_MID ) {
                 sound_context.music_next = (tml_message*)( current_music + 1 );
-                tsf_reset( sound_context.soundfont );
-                for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
-                    tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+                if( sound_context.soundfont ) {
+                    tsf_reset( sound_context.soundfont );
+                    for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
+                        tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+                    }
+                } else {
+                    opl_clear( sound_context.opl );
                 }
             } else if( current_music->format == MUSIC_FORMAT_MUS ) {
                 sound_context.music_next = NULL;
@@ -2691,15 +3051,23 @@ static int app_proc( app_t* app, void* user_data ) {
             sound_context.music_play_counter = music_play_counter;
         } else if( current_music == NULL && sound_context.current_music != NULL ) {
             sound_context.current_music = NULL;
-            tsf_reset( sound_context.soundfont );
-            for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
-                tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+            if( sound_context.soundfont ) {
+                tsf_reset( sound_context.soundfont );
+                for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
+                    tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+                }
+            } else {
+                opl_clear( sound_context.opl );
             }
         } else if( sound_context.music_done ) {
             internals->audio.current_music = NULL;
-            tsf_reset( sound_context.soundfont );
-            for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
-                tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+            if( sound_context.soundfont ) {
+                tsf_reset( sound_context.soundfont );
+                for( int i = 0; i < MUSIC_CHANNELS; ++i ) {
+                    tsf_channel_set_presetnumber( sound_context.soundfont, i, 0, i == 9 ? 1 : 0 );
+                }
+            } else {
+                opl_clear( sound_context.opl );
             }
         }
         initsoundmode( sound_mode, &sound_context.sound_freq, &sound_context.sound_8bit, &sound_context.sound_mono );
@@ -2814,7 +3182,7 @@ static int app_proc( app_t* app, void* user_data ) {
     thread_signal_term( &user_thread_context.app_loop_finished );
     thread_signal_term( &user_thread_context.user_thread_terminated );
     frametimer_destroy( frametimer );
-    tsf_close( sound_context.soundfont );
+    opl_destroy( sound_context.opl );
     thread_mutex_term( &sound_context.mutex );
     crtemu_pc_destroy( crt );
 
@@ -2858,6 +3226,9 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #define MUS_MALLOC tml_mus_custom_malloc
 #define MUS_FREE tml_mus_custom_free
 #include "libs/mus.h"
+
+#define OPL_IMPLEMENTATION
+#include "libs/opl.h"
 
 #define PIXELFONT_IMPLEMENTATION
 #define PIXELFONT_BUILDER_IMPLEMENTATION

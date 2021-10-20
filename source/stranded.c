@@ -587,6 +587,7 @@ void title_screen( void ) {
 
 int main( int argc, char* argv[] ) {
     setvideomode( videomode_320x240 );
+    //setsoundbank( DEFAULT_SOUNDBANK_SB16 );
     setdoublebuffer( 1 );
     loadbitmaps();
     for( int i = 0; i < palcount; ++i ) {

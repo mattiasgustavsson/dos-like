@@ -1298,6 +1298,7 @@ void divcross( enum frame_t type, int x, int y ) {
 int main( int argc, char* argv[] ) {
     setvideomode( videomode_80x25_9x16 );
     setdoublebuffer( 1 );
+    //setsoundbank( DEFAULT_SOUNDBANK_SB16 );
 
     struct tracker_t* tracker = tracker_create();
    
