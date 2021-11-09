@@ -2145,7 +2145,7 @@ tml_message* render_mid_opl( struct music_t* mid, tml_message* next, double* mse
 			}
 		}
 
-		opl_render( opl, sample_pairs, SampleBlock );
+		opl_render( opl, sample_pairs, SampleBlock, internals->audio.music_volume / 255.0f );
         if( next == NULL ) {
             if( loop ) {
                 next = (tml_message*)( mid + 1 );
@@ -2288,7 +2288,7 @@ int render_mus_opl( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, 
             left_over = count - remaining;
             count = remaining;
         }
-        opl_render( opl, output, count );
+        opl_render( opl, output, count, internals->audio.music_volume / 255.0f );
         remaining -= count;
         output += count * 2;
     }
@@ -2385,7 +2385,7 @@ int render_mus_opl( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, 
                     left_over = count - remaining;
                     count = remaining;
                 }
-                opl_render( opl, output, count );
+                opl_render( opl, output, count, internals->audio.music_volume / 255.0f );
                 remaining -= count;
                 output += count * 2;
             } break;
@@ -2615,7 +2615,7 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
                     struct audio_command_t* cmd = &context->commands[ i ];
                     if( cmd->frame_stamp != current_stamp ) {
                         if( sample_pairs_count > 0 ) {
-                            opl_render( context->opl, modbuffer, 735 );
+                            opl_render( context->opl, modbuffer, 735, 1.0f );
                             for( int i = 0; i < 735 * 2; ++i ) {
                                 int s = ( modbuffer[ i ] );
                                 s += sample_pairs[ i ];
@@ -2645,7 +2645,7 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
                 }
             }
             if( sample_pairs_count > 0 ) {
-                opl_render( context->opl, modbuffer, sample_pairs_count );
+                opl_render( context->opl, modbuffer, sample_pairs_count, 1.0f );
                 for( int i = 0; i < sample_pairs_count * 2; ++i ) {
                     int s = ( modbuffer[ i ] );
                     s += sample_pairs[ i ];

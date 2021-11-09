@@ -40,6 +40,7 @@ typedef struct opl_timbre_t {
   unsigned char feedconn;
   signed char finetune;
   unsigned char notenum;
+  signed short noteoffset;
 } opl_timbre_t;
 
 typedef struct opl_t opl_t;
@@ -77,7 +78,7 @@ int opl_loadbank_ibk( opl_t* opl, char const* file );
 
 int opl_loadbank_op2(opl_t* opl, void const* data, int size );
 
-void opl_render( opl_t* opl, short* sample_pairs, int sample_pairs_count );
+void opl_render( opl_t* opl, short* sample_pairs, int sample_pairs_count, float volume );
 
 #endif /* opl_h */
 
@@ -791,8 +792,9 @@ void opl_emu_update_timer( struct opl_emu_t* emu, uint32_t tnum, uint32_t enable
 //  generate - generate samples of sound
 //-------------------------------------------------
 
-void opl_emu_generate( struct opl_emu_t* emu,short *output, uint32_t numsamples)
+void opl_emu_generate( struct opl_emu_t* emu,short *output, uint32_t numsamples, float volume )
 {
+	volume = volume > 1.0f ? 1.0f : volume < 0.0f ? 0.0f : volume;
 	for (uint32_t samp = 0; samp < numsamples; samp++, output+=2)
 	{
 		// clock the system
@@ -800,6 +802,9 @@ void opl_emu_generate( struct opl_emu_t* emu,short *output, uint32_t numsamples)
 
 		// update the FM content; mixing details for YMF262 need verification
 		opl_emu_out(emu, output, 0, 32767, OPL_EMU_REGISTERS_ALL_CHANNELS);
+        
+        *output = (short)((*output) * volume);
+        *(output + 1) = (short)((*(output + 1)) * volume);
 	}
 }
 
@@ -1825,16 +1830,27 @@ void opl_emu_fm_channel_output_rhythm_ch8(struct opl_emu_fm_channel* fmch,uint32
 }
 
 
+// This is the number subtracted from the 2nd voice for an instrument for OP2 soundbanks
+// which causes those second voices to be replaced before their (more important) first voices
+// when the OPL voice channels are all used up
+#define OP2_2NDVOICE_PRIORITY_PENALTY 0xFF
 
 struct voicealloc_t {
   unsigned short priority;
   signed short timbreid;
   signed char channel;
   signed char note;
+  unsigned char voiceindex; /* 1 if 2nd voice for OP2 soundbank instrument, 0 otherwise */
+};
+
+enum op2_flags_t {
+  OP2_FIXEDPITCH = 1,
+  OP2_UNUSED = 2, /* technically delayed vibrato https://moddingwiki.shikadi.net/wiki/OP2_Bank_Format */
+  OP2_DOUBLEVOICE = 4,
 };
 
 struct opl_t {
-  signed char notes2voices[16][128];    /* keeps the map of channel:notes -> voice allocations */
+  signed char notes2voices[16][128][2]; /* keeps the map of channel:notes -> voice allocations */
   unsigned short channelpitch[16];      /* per-channel pitch level */
   unsigned short channelvol[16];        /* per-channel pitch level */
   struct voicealloc_t voices2notes[18]; /* keeps the map of what voice is playing what note/channel currently */
@@ -1842,6 +1858,9 @@ struct opl_t {
   int opl3; /* flag indicating whether or not the sound module is OPL3-compatible or only OPL2 */
   struct opl_emu_t opl_emu;
   struct opl_timbre_t opl_gmtimbres[ 256 ];
+  struct opl_timbre_t opl_gmtimbres_voice2[ 256 ]; /* second voice included in OP2 format */
+  int is_op2; /* true if OP2 soundbank */
+  enum op2_flags_t op2_flags[ 256 ]; /* OP2 format flags */
 };
 
 
@@ -1849,9 +1868,9 @@ void oplregwr( opl_t* opl, uint16_t reg, uint8_t data ) {
     opl_emu_write( &opl->opl_emu, reg, data );
 }
 
-void opl_render( opl_t* opl, short* sample_pairs, int sample_pairs_count ) {
+void opl_render( opl_t* opl, short* sample_pairs, int sample_pairs_count, float volume ) {
     memset( sample_pairs, 0, sample_pairs_count * 2 * sizeof( short ) );
-    opl_emu_generate( &opl->opl_emu, sample_pairs, sample_pairs_count );
+    opl_emu_generate( &opl->opl_emu, sample_pairs, sample_pairs_count, volume );
 }
 
 
@@ -1923,9 +1942,9 @@ const unsigned short pitchtable[256] = {                    /* pitch wheel */
  */
 static struct opl_timbre_t opl_gmtimbres_default[ 256 ] = {
 /* ,---------+-------- Wave select settings                        *
- * | ,-------÷-+------ Sustain/release rates                       *
- * | | ,-----÷-÷-+---- Attack/decay rates                          *
- * | | | ,---÷-÷-÷-+-- AM/VIB/EG/KSR/Multiple bits                 *
+ * | ,-------Ã·-+------ Sustain/release rates                       *
+ * | | ,-----Ã·-Ã·-+---- Attack/decay rates                          *
+ * | | | ,---Ã·-Ã·-Ã·-+-- AM/VIB/EG/KSR/Multiple bits                 *
  * | | | |   | | | |                                               *
  * | | | |   | | | |    ,----+-- KSL/attenuation settings          *
  * | | | |   | | | |    |    |    ,----- Feedback/connection bits  *
@@ -2231,6 +2250,8 @@ opl_t* opl_create(void) {
   if (opl == NULL) return NULL;
   memcpy( opl->opl_gmtimbres, opl_gmtimbres_default, sizeof( opl_gmtimbres_default ) );
   opl_emu_init( &opl->opl_emu );
+
+  opl->is_op2 = 0;
   
   /* detect the hardware and return error if not found */
   oplregwr(opl, 0x04, 0x60); /* reset both timers by writing 60h to register 4 */
@@ -2361,11 +2382,15 @@ void opl_clear(opl_t* opl) {
     opl->voices2notes[x].channel = -1;
     opl->voices2notes[x].note = -1;
     opl->voices2notes[x].timbreid = -1;
+    opl->voices2notes[x].voiceindex = 0xFF;
   }
 
   /* mark all notes as unallocated */
   for (x = 0; x < 16; x++) {
-    for (y = 0; y < 128; y++) opl->notes2voices[x][y] = -1;
+    for (y = 0; y < 128; y++) {
+      opl->notes2voices[x][y][0] = -1;
+      opl->notes2voices[x][y][1] = -1;
+    }
   }
 
   /* pre-set emulated channel patches to default GM ids and reset all
@@ -2386,7 +2411,12 @@ void opl_midi_pitchwheel(opl_t* opl, int channel, int pitchwheel) {
    * recompute all playing notes for this channel with the new pitch TODO */
   for (x = 0; x < voicescount; x++) {
     if (opl->voices2notes[x].channel != channel) continue;
-    opl_noteon(opl, x, opl->voices2notes[x].note, pitchwheel + opl->opl_gmtimbres[opl->voices2notes[x].timbreid].finetune);
+    
+    opl_timbre_t* timbre = opl->voices2notes[x].voiceindex == 0
+      ? &(opl->opl_gmtimbres[opl->voices2notes[x].timbreid])
+      : &(opl->opl_gmtimbres_voice2[opl->voices2notes[x].timbreid])
+      ;
+    opl_noteon(opl, x, opl->voices2notes[x].note + timbre->noteoffset, pitchwheel + timbre->finetune);
   }
 }
 
@@ -2451,8 +2481,8 @@ void opl_loadinstrument(opl_t* opl, int voice, opl_timbre_t *timbre) {
 
 
 /* adjust the volume of the voice (in the usual MIDI range of 0..127) */
-static void voicevolume(opl_t* opl, unsigned short voice, int program, int volume) {
-  unsigned char carrierval = opl->opl_gmtimbres[program].carrier_40;
+static void voicevolume(opl_t* opl, unsigned short voice, const opl_timbre_t* timbre, int volume) {
+  unsigned char carrierval = timbre->carrier_40;
   if (volume == 0) {
     carrierval |= 0x3f;
   } else {
@@ -2466,68 +2496,99 @@ static void voicevolume(opl_t* opl, unsigned short voice, int program, int volum
 static int getinstrument(opl_t* opl, int channel, int note) {
   if ((note < 0) || (note > 127) || (channel > 15)) return(-1);
   if (channel == 9) { /* the percussion channel requires special handling */
-    return(128 | note);
+    if (opl->is_op2)
+      return 128 + note - 35;
+    else
+      return(128 | note);
   }
   return(opl->channelprog[channel]);
 }
 
+void opl_midi_noteoff_op2(opl_t* opl, int channel, int note, int vindex);
 
-void opl_midi_noteon(opl_t* opl, int channel, int note, int velocity) {
+void opl_midi_noteon_op2(opl_t* opl, int channel, int note, int velocity, int vindex) {
   if( velocity == 0 ) {
-      opl_midi_noteoff( opl, channel, note );
+      opl_midi_noteoff_op2( opl, channel, note, vindex );
       return;
   }
   int x, voice = -1;
-  int lowestpriorityvoice = 0;
+  int lowestpriority = 0xFFFF;
+  int highestvoiceindex = -1;
+  int lowestpriorityvoice = -1;
   int instrument;
 
   /* get the instrument to play */
   instrument = getinstrument(opl, channel, note);
   if (instrument < 0) return;
+  
+  /* only play OP2 second voice when appropriate */
+  if (vindex > 0 && (opl->op2_flags[instrument] & OP2_DOUBLEVOICE) == 0) return;
+  
+  opl_timbre_t* timbre = vindex == 0 ? &(opl->opl_gmtimbres[instrument]) : &(opl->opl_gmtimbres_voice2[instrument]);
 
   /* if note already playing, then reuse its voice to avoid leaving a stuck voice */
-  if (opl->notes2voices[channel][note] >= 0) {
-    voice = opl->notes2voices[channel][note];
+  if (opl->notes2voices[channel][note][vindex] >= 0) {
+    voice = opl->notes2voices[channel][note][vindex];
   } else {
     /* else find a free voice, possibly with the right timbre, or at least locate the oldest note */
     for (x = 0; x < voicescount; x++) {
       if (opl->voices2notes[x].channel < 0) {
         voice = x; /* preselect this voice, but continue looking */
         /* if the instrument is right, do not look further */
-        if (opl->voices2notes[x].timbreid == instrument) {
+        if (opl->voices2notes[x].timbreid == instrument && opl->voices2notes[x].voiceindex == vindex) {
           break;
         }
       }
-      if (opl->voices2notes[x].priority < opl->voices2notes[lowestpriorityvoice].priority) lowestpriorityvoice = x;
+      if (opl->voices2notes[x].priority < lowestpriority) {
+        /* 2nd instrumental voice should not overwrite 1st instrumental voice */
+        /* also prefer 2nd instrumental voices when possible */
+        if (opl->voices2notes[x].voiceindex >= vindex && opl->voices2notes[x].voiceindex >= highestvoiceindex) {
+          lowestpriorityvoice = x;
+          lowestpriority = opl->voices2notes[x].priority;
+          highestvoiceindex = opl->voices2notes[x].voiceindex;
+        }
+      }
     }
     /* if no free voice available, then abort the oldest one */
     if (voice < 0) {
+      if (lowestpriorityvoice < 0) {
+        /* no suitable voice found to abort */
+        return;
+      }
       voice = lowestpriorityvoice;
-      opl_midi_noteoff(opl, opl->voices2notes[voice].channel, opl->voices2notes[voice].note);
+      opl_midi_noteoff_op2(opl, opl->voices2notes[voice].channel, opl->voices2notes[voice].note, opl->voices2notes[voice].voiceindex);
     }
   }
 
   /* load the proper instrument, if not already good */
   if (opl->voices2notes[voice].timbreid != instrument) {
     opl->voices2notes[voice].timbreid = instrument;
-    opl_loadinstrument(opl, voice, &(opl->opl_gmtimbres[instrument]));
+    opl_loadinstrument(opl, voice, timbre);
   }
 
   /* update states */
   opl->voices2notes[voice].channel = channel;
   opl->voices2notes[voice].note = note;
   opl->voices2notes[voice].priority = ((16 - channel) << 8) | 0xff; /* lower channels must have priority */
-  opl->notes2voices[channel][note] = voice;
+  opl->voices2notes[voice].voiceindex = vindex;
+  opl->notes2voices[channel][note][vindex] = voice;
+  
+  /* second OP2 voice has lower priority */
+  if (vindex != 0) {
+    int reducedprio = (int)opl->voices2notes[voice].priority - OP2_2NDVOICE_PRIORITY_PENALTY;
+    if (reducedprio < 0) reducedprio = 0;
+    opl->voices2notes[voice].priority = (unsigned short)reducedprio;
+  }
 
   /* set the requested velocity on the voice */
-  voicevolume(opl, voice, opl->voices2notes[voice].timbreid, velocity * opl->channelvol[channel] / 127);
+  voicevolume(opl, voice, timbre, velocity * opl->channelvol[channel] / 127);
 
   /* trigger NOTE_ON on the OPL, take care to apply the 'finetune' pitch correction, too */
   if (channel == 9) { /* percussion channel doesn't provide a real note, so I */
                       /* use a static one (MUSPLAYER uses C-5 (60), why not.  */
-    opl_noteon(opl, voice, opl->opl_gmtimbres[instrument].notenum, opl->channelpitch[channel] + opl->opl_gmtimbres[instrument].finetune);
+    opl_noteon(opl, voice, timbre->notenum + timbre->noteoffset, opl->channelpitch[channel] + timbre->finetune);
   } else {
-    opl_noteon(opl, voice, note, opl->channelpitch[channel] + opl->opl_gmtimbres[instrument].finetune);
+    opl_noteon(opl, voice, note + timbre->noteoffset, opl->channelpitch[channel] + timbre->finetune);
   }
 
   /* reajust all priorities */
@@ -2536,21 +2597,33 @@ void opl_midi_noteon(opl_t* opl, int channel, int note, int velocity) {
   }
 }
 
+void opl_midi_noteon(opl_t* opl, int channel, int note, int velocity) {
+  /* play 2nd instrumental voice first just in case */
+  opl_midi_noteon_op2(opl, channel, note, velocity, 1);
+  opl_midi_noteon_op2(opl, channel, note, velocity, 0);
+}
 
-void opl_midi_noteoff(opl_t* opl, int channel, int note) {
-  int voice = opl->notes2voices[channel][note];
+void opl_midi_noteoff_op2(opl_t* opl, int channel, int note, int vindex) {
+  int voice = opl->notes2voices[channel][note][vindex];
 
   if (voice >= 0) {
     opl_noteoff(opl, voice);
     opl->voices2notes[voice].channel = -1;
     opl->voices2notes[voice].note = -1;
     opl->voices2notes[voice].priority = -1;
-    opl->notes2voices[channel][note] = -1;
+    opl->voices2notes[voice].voiceindex = 0xFF;
+    opl->notes2voices[channel][note][vindex] = -1;
   }
+}
+
+void opl_midi_noteoff(opl_t* opl, int channel, int note) {
+    opl_midi_noteoff_op2(opl, channel, note, 0);
+    opl_midi_noteoff_op2(opl, channel, note, 1);
 }
 
 
 static int opl_loadbank_internal(opl_t* opl, char const* file, int offset) {
+  opl->is_op2 = 0;
   unsigned char buff[16];
   int i;
   /* open the IBK file */
@@ -2598,6 +2671,7 @@ static int opl_loadbank_internal(opl_t* opl, char const* file, int offset) {
     opl->opl_gmtimbres[i].feedconn = buff[10];
     opl->opl_gmtimbres[i].finetune = buff[12]; /* used only in some IBK files */
     opl->opl_gmtimbres[i].notenum = 60;
+    opl->opl_gmtimbres[i].noteoffset = 0;
   }
   /* close file and return success */
   fclose(f);
@@ -2641,6 +2715,31 @@ int opl_loadbank_ibk(opl_t* opl, char const* file) {
   return(res);
 }
 
+static void opl_load_op2_voice(opl_timbre_t* timbre, uint8_t const* buff) {
+  /* load modulator */
+  timbre->modulator_E862 = buff[3]; /* wave select */
+  timbre->modulator_E862 <<= 8;
+  timbre->modulator_E862 |= buff[2]; /* sust/release */
+  timbre->modulator_E862 <<= 8;
+  timbre->modulator_E862 |= buff[1]; /* attack/decay */
+  timbre->modulator_E862 <<= 8;
+  timbre->modulator_E862 |= buff[0]; /* AM/VIB... flags */
+  /* load carrier */
+  timbre->carrier_E862 = buff[10]; /* wave select */
+  timbre->carrier_E862 <<= 8;
+  timbre->carrier_E862 |= buff[9]; /* sust/release */
+  timbre->carrier_E862 <<= 8;
+  timbre->carrier_E862 |= buff[8]; /* attack/decay */
+  timbre->carrier_E862 <<= 8;
+  timbre->carrier_E862 |= buff[7]; /* AM/VIB... flags */
+  /* load KSL */
+  timbre->modulator_40 = ( buff[5] & 0x3f ) | ( buff[4] & 0xc0 );
+  timbre->carrier_40 = ( buff[12] & 0x3f ) | ( buff[11] & 0xc0 );
+  /* feedconn & finetune */
+  timbre->feedconn = buff[6];
+  timbre->finetune = 0;
+  timbre->noteoffset = (int16_t)(buff[14] | ((uint16_t)buff[15] << 8));
+}
 
 int opl_loadbank_op2(opl_t* opl, void const* data, int size ) {
   if( size < 8 + 36 * 175 ) {
@@ -2653,39 +2752,29 @@ int opl_loadbank_op2(opl_t* opl, void const* data, int size ) {
     return(-3);
   }
   buff += 8;
+  
+  opl->is_op2 = 1;
 
   /* load 128 instruments from the IBK file */
   for (i = 0; i < 175; i++) {
     /* load instruments */
-    int n = i;
-    if( i >= 128 ) {
-        n = 35 + i;
-    }
+    
+    /* OP2 instrument header */
+    opl->op2_flags[i] = (enum op2_flags_t)( buff[0] | ((uint16_t)buff[1] << 8) );
+    int finetune = buff[2];
+    uint8_t fixednote = buff[3];
+    buff += 4;
+    
+    /* first voice */
+    opl_load_op2_voice(&opl->opl_gmtimbres[i], buff);
+    opl->opl_gmtimbres[i].notenum = fixednote;
+    buff += 16;
 
-    /* load modulator */
-    opl->opl_gmtimbres[n].modulator_E862 = buff[7]; /* wave select */
-    opl->opl_gmtimbres[n].modulator_E862 <<= 8;
-    opl->opl_gmtimbres[n].modulator_E862 |= buff[6]; /* sust/release */
-    opl->opl_gmtimbres[n].modulator_E862 <<= 8;
-    opl->opl_gmtimbres[n].modulator_E862 |= buff[5]; /* attack/decay */
-    opl->opl_gmtimbres[n].modulator_E862 <<= 8;
-    opl->opl_gmtimbres[n].modulator_E862 |= buff[4]; /* AM/VIB... flags */
-    /* load carrier */
-    opl->opl_gmtimbres[n].carrier_E862 = buff[14]; /* wave select */
-    opl->opl_gmtimbres[n].carrier_E862 <<= 8;
-    opl->opl_gmtimbres[n].carrier_E862 |= buff[13]; /* sust/release */
-    opl->opl_gmtimbres[n].carrier_E862 <<= 8;
-    opl->opl_gmtimbres[n].carrier_E862 |= buff[12]; /* attack/decay */
-    opl->opl_gmtimbres[n].carrier_E862 <<= 8;
-    opl->opl_gmtimbres[n].carrier_E862 |= buff[11]; /* AM/VIB... flags */
-    /* load KSL */
-    opl->opl_gmtimbres[n].modulator_40 = ( buff[9] & 0x3f ) | ( buff[8] & 0xc0 );
-    opl->opl_gmtimbres[n].carrier_40 = ( buff[16] & 0x3f ) | ( buff[15] & 0xc0 );
-    /* feedconn & finetune */
-    opl->opl_gmtimbres[i].feedconn = buff[10];
-    //opl->opl_gmtimbres[n].finetune = 0;
-    opl->opl_gmtimbres[n].notenum = buff[3];
-    buff += 36;
+    /* second voice */
+    opl_load_op2_voice(&opl->opl_gmtimbres_voice2[i], buff);
+    opl->opl_gmtimbres_voice2[i].notenum = fixednote;
+    opl->opl_gmtimbres_voice2[i].finetune += finetune - 128;
+    buff += 16;
   }
   /* close file and return success */
   return(0);
