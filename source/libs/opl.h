@@ -1940,9 +1940,9 @@ const unsigned short pitchtable[256] = {                    /* pitch wheel */
  */
 static struct opl_timbre_t opl_gmtimbres_default[ 256 ] = {
 /* ,---------+-------- Wave select settings                        *
- * | ,-------÷-+------ Sustain/release rates                       *
- * | | ,-----÷-÷-+---- Attack/decay rates                          *
- * | | | ,---÷-÷-÷-+-- AM/VIB/EG/KSR/Multiple bits                 *
+ * | ,-------Ã·-+------ Sustain/release rates                       *
+ * | | ,-----Ã·-Ã·-+---- Attack/decay rates                          *
+ * | | | ,---Ã·-Ã·-Ã·-+-- AM/VIB/EG/KSR/Multiple bits                 *
  * | | | |   | | | |                                               *
  * | | | |   | | | |    ,----+-- KSL/attenuation settings          *
  * | | | |   | | | |    |    |    ,----- Feedback/connection bits  *
@@ -2735,7 +2735,7 @@ int opl_loadbank_op2(opl_t* opl, void const* data, int size ) {
     /* load instruments */
     
     /* OP2 instrument header */
-    opl->op2_flags[i] = buff[0] | ((uint16_t)buff[1] << 8);
+    opl->op2_flags[i] = (enum op2_flags_t)( buff[0] | ((uint16_t)buff[1] << 8) );
     int finetune = buff[2];
     uint8_t fixednote = buff[3];
     buff += 4;
