@@ -82,6 +82,9 @@ void crtemu_pc_coordinates_bitmap_to_window( crtemu_pc_t* crtemu_pc, int width, 
     #define CRTEMU_PC_SDL
 #endif
 
+#ifdef __wasm__
+    #define CRTEMU_PC_WEBGL
+#endif
 
 #ifndef CRTEMU_PC_SDL
 
@@ -147,8 +150,12 @@ void crtemu_pc_coordinates_bitmap_to_window( crtemu_pc_t* crtemu_pc, int width, 
 
 #else
 
-    #include <GL/glew.h>
-    #include "SDL_opengl.h"
+    #ifndef CRTEMU_PC_WEBGL
+        #include <GL/glew.h>
+        #include "SDL_opengl.h"
+    #else
+        #include <wajic_gl.h>
+    #endif
     #define CRTEMU_PC_GLCALLTYPE GLAPIENTRY
     
     typedef GLuint CRTEMU_PC_GLuint;
@@ -189,8 +196,14 @@ void crtemu_pc_coordinates_bitmap_to_window( crtemu_pc_t* crtemu_pc, int width, 
      #define CRTEMU_PC_GL_COLOR_ATTACHMENT0 GL_COLOR_ATTACHMENT0 
      #define CRTEMU_PC_GL_TEXTURE_WRAP_S GL_TEXTURE_WRAP_S 
      #define CRTEMU_PC_GL_TEXTURE_WRAP_T GL_TEXTURE_WRAP_T 
-     #define CRTEMU_PC_GL_CLAMP_TO_BORDER GL_CLAMP_TO_BORDER 
-     #define CRTEMU_PC_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
+     #ifndef CRTEMU_PC_WEBGL
+         #define CRTEMU_PC_GL_CLAMP_TO_BORDER GL_CLAMP_TO_BORDER 
+         #define CRTEMU_PC_GL_TEXTURE_BORDER_COLOR GL_TEXTURE_BORDER_COLOR
+     #else
+         // WebGL does not support GL_CLAMP_TO_BORDER, we have to emulate
+         // this behavior with code in the fragment shader
+         #define CRTEMU_PC_GL_CLAMP_TO_BORDER GL_CLAMP_TO_EDGE
+     #endif
 #endif
 
 
@@ -570,7 +583,11 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
     #endif
 
     char const* vs_source = 
-        "#version 120\n\n"
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
         ""
         "attribute vec4 pos;"
         "varying vec2 uv;"
@@ -582,7 +599,11 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
         "    }";
 
     char const* crt_fs_source = 
-        "#version 120\n\n\n"
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
         "\n"
         "varying vec2 uv;\n"
         "\n"
@@ -595,6 +616,17 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
         "uniform sampler2D frametexture;\n"
         "uniform float use_frame;\n"
         "\n"
+        #ifdef CRTEMU_PC_WEBGL
+            // WebGL does not support GL_CLAMP_TO_BORDER so we overwrite texture2D
+            // with this function which emulates the clamp-to-border behavior
+            "vec4 texture2Dborder(sampler2D samp, vec2 tc)\n"
+            "    {\n"
+            "    float borderdist = .502-max(abs(.5-tc.x), abs(.5-tc.y));\n"
+            "    float borderfade = clamp(borderdist * 400.0, 0.0, 1.0);\n"
+            "    return texture2D( samp, tc ) * borderfade;\n"
+            "    }\n"
+            "#define texture2D texture2Dborder\n"
+        #endif
         "vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )\n"
 	    "    {\n"
 	    "    tc = tc * vec2(1.035, 0.96) + vec2( mix( -0.018,-0.0125*0.75,use_frame), 0.02);\n"
@@ -637,7 +669,7 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "    float x =  sin(0.1*time+curved_uv.y*13.0)*sin(0.23*time+curved_uv.y*19.0)*sin(0.3+0.11*time+curved_uv.y*23.0)*0.0012;\n"
 	    "    float o =sin(gl_FragCoord.y*1.5)/resolution.x;\n"
 	    "    x+=o*0.25;\n"
-		"	x *= 0.2f;\n"
+		"	x *= 0.2;\n"
 	    "    col.r = tsample(backbuffer,vec2(x+scuv.x+0.0009*0.25,scuv.y+0.0009*0.25),resolution.y/800.0, resolution ).x+0.02;\n"
 	    "    col.g = tsample(backbuffer,vec2(x+scuv.x+0.0000*0.25,scuv.y-0.0011*0.25),resolution.y/800.0, resolution ).y+0.02;\n"
 	    "    col.b = tsample(backbuffer,vec2(x+scuv.x-0.0015*0.25,scuv.y+0.0000*0.25),resolution.y/800.0, resolution ).z+0.02;\n"
@@ -671,7 +703,7 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "    col *= vig;\n"
 	    "\n"
 	    "    /* Scanlines */\n"
-	    "    float scans = clamp( 0.5+0.2*sin(cos(20.0*time)*0.32+curved_uv.y*size.y*1.75f), 0.0, 1.0);\n"
+	    "    float scans = clamp( 0.5+0.2*sin(cos(20.0*time)*0.32+curved_uv.y*size.y*1.75), 0.0, 1.0);\n"
 	    "    float s = pow(scans,0.9);\n"
 	    "    col = col * vec3(s);\n"
         "\n"
@@ -716,7 +748,11 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
     if( crtemu_pc->crt_shader == 0 ) goto failed;
 
     char const* blur_fs_source = 
-        "#version 120\n\n"
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
 		""
         "varying vec2 uv;"
 		""
@@ -742,7 +778,11 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
     if( crtemu_pc->blur_shader == 0 ) goto failed;
 
     char const* accumulate_fs_source = 
-        "#version 120\n\n"
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
 		""
         "varying vec2 uv;"
 		""
@@ -763,7 +803,11 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
     if( crtemu_pc->accumulate_shader == 0 ) goto failed;
 
     char const* blend_fs_source = 
-        "#version 120\n\n"
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
 		""
         "varying vec2 uv;"
 		""
@@ -784,7 +828,11 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
     if( crtemu_pc->blend_shader == 0 ) goto failed;
 
     char const* copy_fs_source = 
-        "#version 120\n\n"
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
 		""
         "varying vec2 uv;"
 		""
@@ -832,6 +880,28 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
     crtemu_pc->BindBuffer( CRTEMU_PC_GL_ARRAY_BUFFER, crtemu_pc->vertexbuffer );
     crtemu_pc->EnableVertexAttribArray( 0 );
     crtemu_pc->VertexAttribPointer( 0, 4, CRTEMU_PC_GL_FLOAT, CRTEMU_PC_GL_FALSE, 4 * sizeof( CRTEMU_PC_GLfloat ), 0 );
+
+    #ifdef CRTEMU_PC_WEBGL
+        // Avoid WebGL error "TEXTURE_2D at unit 0 is incomplete: Non-power-of-two textures must have a wrap mode of CLAMP_TO_EDGE."
+        crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->accumulatetexture_a );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->accumulatetexture_b );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->blurtexture_a );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->blurtexture_b );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->frametexture );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+        crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->backbuffer );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+        crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+    #endif
 
     return crtemu_pc;
 
@@ -1149,7 +1219,9 @@ void crtemu_pc_present( crtemu_pc_t* crtemu_pc, CRTEMU_PC_U64 time_us, CRTEMU_PC
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_MAG_FILTER, CRTEMU_PC_GL_LINEAR );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, CRTEMU_PC_GL_CLAMP_TO_BORDER );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, CRTEMU_PC_GL_CLAMP_TO_BORDER );
-    crtemu_pc->TexParameterfv( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_BORDER_COLOR, color );    
+    #ifndef CRTEMU_PC_WEBGL
+        crtemu_pc->TexParameterfv( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_BORDER_COLOR, color );    
+    #endif
 
     crtemu_pc->ActiveTexture( CRTEMU_PC_GL_TEXTURE1 );
     crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->blurtexture_a );   
@@ -1157,7 +1229,9 @@ void crtemu_pc_present( crtemu_pc_t* crtemu_pc, CRTEMU_PC_U64 time_us, CRTEMU_PC
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_MAG_FILTER, CRTEMU_PC_GL_LINEAR );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, CRTEMU_PC_GL_CLAMP_TO_BORDER );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, CRTEMU_PC_GL_CLAMP_TO_BORDER );
-    crtemu_pc->TexParameterfv( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_BORDER_COLOR, color );    
+    #ifndef CRTEMU_PC_WEBGL
+        crtemu_pc->TexParameterfv( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_BORDER_COLOR, color );    
+    #endif
 
     crtemu_pc->ActiveTexture( CRTEMU_PC_GL_TEXTURE3 );
     crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->frametexture );   
@@ -1165,7 +1239,9 @@ void crtemu_pc_present( crtemu_pc_t* crtemu_pc, CRTEMU_PC_U64 time_us, CRTEMU_PC
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_MAG_FILTER, CRTEMU_PC_GL_LINEAR );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_S, CRTEMU_PC_GL_CLAMP_TO_BORDER );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_WRAP_T, CRTEMU_PC_GL_CLAMP_TO_BORDER );
-    crtemu_pc->TexParameterfv( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_BORDER_COLOR, color );    
+    #ifndef CRTEMU_PC_WEBGL
+        crtemu_pc->TexParameterfv( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_BORDER_COLOR, color );    
+    #endif
 
     crtemu_pc->DrawArrays( CRTEMU_PC_GL_TRIANGLE_FAN, 0, 4 );    
 

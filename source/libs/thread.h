@@ -614,6 +614,10 @@ struct thread_queue_t
     #include <pthread.h>
     #include <sys/time.h>
 
+#elif defined( __wasm__ )
+
+    // WebAssembly provides no simple means for real threads, so most functions here are stubs
+
 #else 
     #error Unknown platform.
 #endif
@@ -634,6 +638,10 @@ thread_id_t thread_current_thread_id( void )
     
         return (void*) pthread_self();
 
+    #elif defined( __wasm__ )
+
+        return (void*) 1;
+
     #else 
         #error Unknown platform.
     #endif
@@ -650,7 +658,7 @@ void thread_yield( void )
     
         sched_yield();
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -666,7 +674,7 @@ void thread_exit( int return_code )
     
         pthread_exit( (void*)(uintptr_t) return_code );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -691,6 +699,10 @@ thread_ptr_t thread_create( int (*thread_proc)( void* ), void* user_data, int st
 
         return (thread_ptr_t) thread;
     
+    #elif defined( __wasm__ )
+
+        return NULL;
+
     #else 
         #error Unknown platform.
     #endif
@@ -708,7 +720,7 @@ void thread_destroy( thread_ptr_t thread )
 
         pthread_join( (pthread_t) thread, NULL );
 
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -729,6 +741,10 @@ int thread_join( thread_ptr_t thread )
         pthread_join( (pthread_t) thread, &retval );
         return (int)(uintptr_t) retval;
 
+    #elif defined( __wasm__ )
+
+        return 0;
+
     #else 
         #error Unknown platform.
     #endif
@@ -748,7 +764,7 @@ void thread_set_high_priority( thread_ptr_t thread )
         sp.sched_priority = sched_get_priority_min( SCHED_RR );
         pthread_setschedparam( pthread_self(), SCHED_RR, &sp);
 
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -773,7 +789,7 @@ void thread_mutex_init( thread_mutex_t* mutex )
 
         pthread_mutex_init( (pthread_mutex_t*) mutex, NULL );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -789,7 +805,7 @@ void thread_mutex_term( thread_mutex_t* mutex )
 
         pthread_mutex_destroy( (pthread_mutex_t*) mutex );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -805,7 +821,7 @@ void thread_mutex_lock( thread_mutex_t* mutex )
 
         pthread_mutex_lock( (pthread_mutex_t*) mutex );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -821,7 +837,7 @@ void thread_mutex_unlock( thread_mutex_t* mutex )
 
         pthread_mutex_unlock( (pthread_mutex_t*) mutex );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -843,6 +859,10 @@ struct thread_internal_signal_t
 
         pthread_mutex_t mutex;
         pthread_cond_t condition;
+        int value;
+
+    #elif defined( __wasm__ )
+
         int value;
 
     #else 
@@ -881,6 +901,10 @@ void thread_signal_init( thread_signal_t* signal )
         pthread_cond_init( &internal->condition, NULL );
         internal->value = 0;
     
+    #elif defined( __wasm__ )
+
+        internal->value = 0;
+
     #else 
         #error Unknown platform.
     #endif
@@ -904,7 +928,7 @@ void thread_signal_init( thread_signal_t* signal )
         pthread_mutex_destroy( &internal->mutex );
         pthread_cond_destroy( &internal->condition );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -932,6 +956,10 @@ void thread_signal_raise( thread_signal_t* signal )
         pthread_mutex_unlock( &internal->mutex );
         pthread_cond_signal( &internal->condition );
     
+    #elif defined( __wasm__ )
+
+        internal->value = 1;
+
     #else 
         #error Unknown platform.
     #endif
@@ -985,6 +1013,10 @@ int thread_signal_wait( thread_signal_t* signal, int timeout_ms )
         pthread_mutex_unlock( &internal->mutex );
         return !failed;
     
+    #elif defined( __wasm__ )
+
+        return 1;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1003,6 +1035,10 @@ int thread_atomic_int_load( thread_atomic_int_t* atomic )
         __atomic_load( &atomic->i, &ret, __ATOMIC_SEQ_CST );
         return ret;
     
+    #elif defined( __wasm__ )
+
+        return atomic->i;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1019,6 +1055,10 @@ void thread_atomic_int_store( thread_atomic_int_t* atomic, int desired )
 
         __atomic_store( &atomic->i, &desired, __ATOMIC_SEQ_CST );
     
+    #elif defined( __wasm__ )
+
+        atomic->i = desired;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1035,6 +1075,10 @@ int thread_atomic_int_inc( thread_atomic_int_t* atomic )
 
         return (int)__atomic_fetch_add( &atomic->i, 1, __ATOMIC_SEQ_CST );
     
+    #elif defined( __wasm__ )
+
+        return atomic->i++;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1050,6 +1094,10 @@ int thread_atomic_int_dec( thread_atomic_int_t* atomic )
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
         return (int)__atomic_fetch_sub( &atomic->i, 1, __ATOMIC_SEQ_CST );
+
+    #elif defined( __wasm__ )
+
+        return atomic->i--;
 
     #else 
         #error Unknown platform.
@@ -1068,6 +1116,10 @@ int thread_atomic_int_add( thread_atomic_int_t* atomic, int value )
 
         return (int)__atomic_fetch_add( &atomic->i, value, __ATOMIC_SEQ_CST );
     
+    #elif defined( __wasm__ )
+
+        return (atomic->i += value) - value;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1083,6 +1135,10 @@ int thread_atomic_int_sub( thread_atomic_int_t* atomic, int value )
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
         return (int)__atomic_fetch_sub( &atomic->i, value, __ATOMIC_SEQ_CST );
+
+    #elif defined( __wasm__ )
+
+        return (atomic->i -= value) + value;
 
     #else 
         #error Unknown platform.
@@ -1103,6 +1159,12 @@ int thread_atomic_int_swap( thread_atomic_int_t* atomic, int desired )
         __atomic_exchange( &atomic->i, &desired, &old, __ATOMIC_SEQ_CST );
         return old;
     
+    #elif defined( __wasm__ )
+
+        int old = atomic->i;
+        atomic->i = desired;
+        return old;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1120,6 +1182,15 @@ int thread_atomic_int_compare_and_swap( thread_atomic_int_t* atomic, int expecte
         __atomic_compare_exchange( &atomic->i, &expected, &desired, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST );
         return expected;
     
+    #elif defined( __wasm__ )
+
+        if (atomic->i == expected)
+        {
+            atomic->i = desired;
+            return expected;
+        }
+        return atomic->i;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1138,6 +1209,10 @@ void* thread_atomic_ptr_load( thread_atomic_ptr_t* atomic )
         __atomic_load( &atomic->ptr, &ret, __ATOMIC_SEQ_CST );
         return ret;
     
+    #elif defined( __wasm__ )
+
+        return atomic->ptr;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1159,6 +1234,11 @@ void thread_atomic_ptr_store( thread_atomic_ptr_t* atomic, void* desired )
     #elif defined( __linux__ ) || defined( __APPLE__ ) || defined( __ANDROID__ )
 
         __atomic_store( &atomic->ptr, &desired, 0 );
+
+    #elif defined( __wasm__ )
+
+        atomic->ptr = desired;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1182,6 +1262,12 @@ void* thread_atomic_ptr_swap( thread_atomic_ptr_t* atomic, void* desired )
         __atomic_exchange( &atomic->ptr, &desired, &old, __ATOMIC_SEQ_CST );
         return old;
     
+    #elif defined( __wasm__ )
+
+        void* old = atomic->ptr;
+        atomic->ptr = desired;
+        return old;
+
     #else 
         #error Unknown platform.
     #endif
@@ -1198,6 +1284,15 @@ void* thread_atomic_ptr_compare_and_swap( thread_atomic_ptr_t* atomic, void* exp
 
         __atomic_compare_exchange( &atomic->ptr, &expected, &desired, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST );
         return expected;
+
+    #elif defined( __wasm__ )
+
+        if (atomic->ptr == expected)
+        {
+            atomic->ptr = desired;
+            return expected;
+        }
+        return atomic->ptr;
 
     #else 
         #error Unknown platform.
@@ -1227,7 +1322,7 @@ void thread_timer_init( thread_timer_t* timer )
 
         // Nothing
 
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -1249,7 +1344,7 @@ void thread_timer_term( thread_timer_t* timer )
 
         // Nothing
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -1274,7 +1369,7 @@ void thread_timer_wait( thread_timer_t* timer, THREAD_U64 nanoseconds )
         while( nanosleep( &req, &rem ) )
             req = rem;
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -1298,7 +1393,11 @@ thread_tls_t thread_tls_create( void )
         else
             return NULL;
 
-    #else 
+    #elif defined( __wasm__ )
+
+        return NULL;
+
+    #else
         #error Unknown platform.
     #endif
     }
@@ -1314,7 +1413,7 @@ void thread_tls_destroy( thread_tls_t tls )
 
         pthread_key_delete( (pthread_key_t) (uintptr_t) tls );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -1330,7 +1429,7 @@ void thread_tls_set( thread_tls_t tls, void* value )
 
         pthread_setspecific( (pthread_key_t) (uintptr_t) tls, value );
     
-    #else 
+    #elif !defined( __wasm__ )
         #error Unknown platform.
     #endif
     }
@@ -1346,6 +1445,10 @@ void* thread_tls_get( thread_tls_t tls )
 
         return pthread_getspecific( (pthread_key_t) (uintptr_t) tls );
     
+    #elif defined( __wasm__ )
+
+        return NULL;
+
     #else 
         #error Unknown platform.
     #endif

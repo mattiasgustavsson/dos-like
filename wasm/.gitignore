@@ -1,0 +1,9 @@
+system/
+*.exe
+*.o
+*.wasm
+*.js
+*.h
+*.html
+!index.html
+!template.html

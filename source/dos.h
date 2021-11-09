@@ -243,6 +243,11 @@ int mousey( void );
 #include "libs/awe32rom.h"
 #include "libs/crtframe.h"
 
+#ifdef __wasm__
+#define WA_CORO_IMPLEMENT_NANOSLEEP
+#include <wajic_coro.h>
+#endif
+
 static uint32_t default_palette[ 256 ] = {
     0x000000, 0xaa0000, 0x00aa00, 0xaaaa00, 0x0000aa, 0xaa00aa, 0x0055aa, 0xaaaaaa, 0x555555, 0xff5555, 0x55ff55, 0xffff55, 0x5555ff, 0xff55ff, 0x55ffff, 0xffffff, 0x000000, 0x141414, 0x202020, 0x2c2c2c, 0x383838, 0x454545, 0x515151, 0x616161, 0x717171, 0x828282, 0x929292, 0xa2a2a2, 0xb6b6b6, 0xcbcbcb, 0xe3e3e3, 0xffffff, 0xff0000, 0xff0041, 0xff007d, 0xff00be, 0xff00ff, 0xbe00ff, 0x7d00ff, 0x4100ff, 0x0000ff, 0x0041ff, 0x007dff, 0x00beff, 0x00ffff, 0x00ffbe, 0x00ff7d, 0x00ff41, 0x00ff00, 0x41ff00, 0x7dff00, 0xbeff00, 0xffff00, 0xffbe00, 0xff7d00, 0xff4100, 0xff7d7d, 0xff7d9e, 0xff7dbe, 0xff7ddf, 0xff7dff, 0xdf7dff, 0xbe7dff, 0x9e7dff, 
     0x7f7dff, 0x7d9eff, 0x7dbeff, 0x7ddfff, 0x7dffff, 0x7dffdf, 0x7dffbe, 0x7dff9e, 0x7dff7d, 0x9eff7d, 0xbeff7d, 0xdfff7d, 0xffff7d, 0xffdf7d, 0xffbe7d, 0xff9e7d, 0xffb6b6, 0xffb6c7, 0xffb6db, 0xffb6eb, 0xffb6ff, 0xebb6ff, 0xdbb6ff, 0xc7b6ff, 0xb6b6ff, 0xb6c7ff, 0xb6dbff, 0xb6ebff, 0xb6ffff, 0xb6ffeb, 0xb6ffdb, 0xb6ffc7, 0xb6ffb6, 0xc7ffb6, 0xdbffb6, 0xebffb6, 0xffffb6, 0xffebb6, 0xffdbb6, 0xffc7b6, 0x710000, 0x71001c, 0x710038, 0x710055, 0x710071, 0x550071, 0x380071, 0x1c0071, 0x000071, 0x001c71, 0x003871, 0x005571, 0x007171, 0x007155, 0x007138, 0x00711c, 0x007100, 0x1c7100, 0x387100, 0x557100, 0x717100, 0x715500, 0x713800, 0x711c00, 
@@ -425,6 +430,14 @@ struct internals_t {
             size_t size;
         } soundbanks[ 256 ];
     } audio;
+
+    #ifdef __wasm__
+    struct {
+        int swap_counts;
+        int read_counts;
+        WaCoro user_coro;
+    } wasm;
+    #endif
 
 }* internals;
 
@@ -636,6 +649,13 @@ void setdoublebuffer( int enabled ) {
 
 
 unsigned char* swapbuffers( void ) {
+    #ifdef __wasm__
+    if (internals->wasm.swap_counts++ > 2) {
+        // In WebAssembly without real threads, if a dos-like application never calls waitvbl
+        // by itself, we force a call to it every few calls to swapbuffer
+        waitvbl();
+    }
+    #endif
     if( internals->screen.doublebuffer ) {
         thread_mutex_lock( &internals->mutex );
         if( internals->screen.buffer == internals->screen.buffer0 ) {
@@ -806,11 +826,25 @@ void outtextxy( int x, int y, char const* text ) {
 
 void waitvbl( void ) {
     if( thread_atomic_int_load( &internals->exit_flag ) == 0 ) {
+        #ifndef __wasm__
         int current_vbl_count = thread_atomic_int_load( &internals->vbl.count );
         while( current_vbl_count == thread_atomic_int_load( &internals->vbl.count ) ) {
             thread_signal_wait( &internals->vbl.signal, 1000 );
         }
+        #else
+        WaCoroSwitch(0);
+        internals->wasm.swap_counts = internals->wasm.read_counts = 0;
+        #endif
     }
+}
+
+
+static void signalvbl( void ) {
+    thread_atomic_int_inc( &internals->vbl.count );
+    thread_signal_raise( &internals->vbl.signal );
+    #ifdef __wasm__
+    WaCoroSwitch(internals->wasm.user_coro);
+    #endif
 }
 
 
@@ -1543,6 +1577,13 @@ int keystate( enum keycode_t key ) {
 
 
 enum keycode_t* readkeys( void ) {
+    #ifdef __wasm__
+    if (internals->wasm.read_counts++ > 100) {
+        // In WebAssembly without real threads, if a dos-like application never calls waitvbl
+        // by itself, we force a call to it every 100 calls to readkeys/readchars
+        waitvbl();
+    }
+    #endif
     thread_mutex_lock( &internals->mutex );
     memset( internals->input.keybuffer, 0, sizeof( internals->input.keybuffer0 ) );
     if( internals->input.keybuffer == internals->input.keybuffer0 ) {
@@ -1556,6 +1597,13 @@ enum keycode_t* readkeys( void ) {
 
 
 char const* readchars( void ) {
+    #ifdef __wasm__
+    if (internals->wasm.read_counts++ > 100) {
+        // In WebAssembly without real threads, if a dos-like application never calls waitvbl
+        // by itself, we force a call to it every 100 calls to readkeys/readchars
+        waitvbl();
+    }
+    #endif
     thread_mutex_lock( &internals->mutex );
     memset( internals->input.charbuffer, 0, sizeof( internals->input.charbuffer0 ) );
     if( internals->input.charbuffer == internals->input.charbuffer0 ) {
@@ -1927,27 +1975,33 @@ struct user_thread_context_t {
 
 int dosmain( int argc, char* argv[] );
 
-static int user_thread_proc( void* user_data ) {
+#ifndef __wasm__
+static
+#else
+WA_EXPORT(user_thread_proc)
+#endif
+int user_thread_proc( void* user_data ) {
     struct user_thread_context_t* context = (struct user_thread_context_t*) user_data;
         
     internals_create( context->sound_buffer_size );
 
     thread_signal_raise( &context->user_thread_initialized );
 
-    if( thread_atomic_int_load( &internals->exit_flag ) == 0 ) {
-        int current_vbl_count = thread_atomic_int_load( &internals->vbl.count );
-        while( current_vbl_count == thread_atomic_int_load( &internals->vbl.count ) ) {
-            thread_signal_wait( &internals->vbl.signal, 1000 );
-        }
-    }
+    waitvbl();
 
     int result = dosmain( context->app_context->argc, context->app_context->argv );
 
     thread_atomic_int_store( &context->user_thread_finished, 1 );
     thread_signal_wait( &context->app_loop_finished, 5000 ); 
+    #ifdef __wasm__
+    WaCoroSwitch(0);
+    #endif
     internals_destroy();
 
     thread_signal_raise( &context->user_thread_terminated );
+    #ifdef __wasm__
+    WaCoroSwitch(0);
+    #endif
     return result;
 }
 
@@ -2708,7 +2762,11 @@ static int app_proc( app_t* app, void* user_data ) {
    
     app_title( app, app_filename( app ) );
 
+    #ifndef __wasm__
     bool fullscreen = true;
+    #else
+    bool fullscreen = false;
+    #endif
    
     int modargc = 0;
     char* modargv[ 256 ];
@@ -2781,6 +2839,7 @@ static int app_proc( app_t* app, void* user_data ) {
     thread_signal_init( &user_thread_context.app_loop_finished );
     thread_signal_init( &user_thread_context.user_thread_terminated );
 
+    #ifndef __wasm__
     thread_ptr_t user_thread = thread_create( user_thread_proc, &user_thread_context,
         THREAD_STACK_SIZE_DEFAULT );
 
@@ -2790,6 +2849,14 @@ static int app_proc( app_t* app, void* user_data ) {
         thread_signal_term( &user_thread_context.user_thread_terminated );
         return EXIT_FAILURE;
     }    
+    #else
+    // WebAssembly has no real threads so we use coroutines which can switch context between two
+    // callstacks to simulate the behavior from native platforms
+    WaCoro user_coro = WaCoroInitNew(user_thread_proc, "user_thread_proc", &user_thread_context,
+        THREAD_STACK_SIZE_DEFAULT);
+    WaCoroSwitch(user_coro);
+    internals->wasm.user_coro = user_coro; // only now internals exists
+    #endif
 
     crtemu_pc_t* crt = crtemu_pc_create( NULL );
     #ifndef DISABLE_SCREEN_FRAME
@@ -2816,8 +2883,7 @@ static int app_proc( app_t* app, void* user_data ) {
     app_sound( app, SOUND_BUFFER_SIZE * 2, app_sound_callback, &sound_context );
     int previous_soundbank = internals->audio.current_soundbank;
 
-    thread_atomic_int_inc( &internals->vbl.count );
-    thread_signal_raise( &internals->vbl.signal );    
+    signalvbl();
 
     struct {
         struct sound_t* sound;
@@ -2888,8 +2954,7 @@ static int app_proc( app_t* app, void* user_data ) {
         if( app_state == APP_STATE_EXIT_REQUESTED ) {
             // Signal that we need to force the user thread to exit
             thread_atomic_int_store( &internals->exit_flag, 1 );
-            thread_atomic_int_inc( &internals->vbl.count );
-            thread_signal_raise( &internals->vbl.signal );    
+            signalvbl();
             break; 
         }
 
@@ -3000,8 +3065,7 @@ static int app_proc( app_t* app, void* user_data ) {
         thread_mutex_unlock( &internals->mutex );
 
         // Signal to the game that the frame is completed, and that we are just starting the next one
-        thread_atomic_int_inc( &internals->vbl.count );
-        thread_signal_raise( &internals->vbl.signal );    
+        signalvbl();
 
         // Process audio commands
         thread_mutex_lock( &sound_context.mutex );
@@ -3178,6 +3242,10 @@ static int app_proc( app_t* app, void* user_data ) {
 
     thread_signal_raise( &user_thread_context.app_loop_finished );   
     int user_exit = thread_signal_wait( &user_thread_context.user_thread_terminated, 170 );
+    #ifdef __wasm__
+    WaCoroSwitch(user_coro);
+    user_exit = 0; // always show fade out animation
+    #endif
     if( !user_exit ) {
         for( int i = 0; i < 60; ++i ) {
             APP_U64 time = app_time_count( app );
@@ -3203,14 +3271,19 @@ static int app_proc( app_t* app, void* user_data ) {
     thread_mutex_term( &sound_context.mutex );
     crtemu_pc_destroy( crt );
 
-
+    #ifndef __wasm__
     return thread_join( user_thread );
+    #else
+    return 0;
+    #endif
 }
 
 
 #define APP_IMPLEMENTATION
 #ifdef _WIN32 
     #define APP_WINDOWS
+#elif __wasm__
+    #define APP_WASM
 #else 
     #define APP_SDL
 #endif
@@ -3271,6 +3344,7 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #define TSF_LOG10   log10
 #define TSF_SQRT   (float)sqrt
 #define TSF_SQRTF   (float)sqrt
+#include <math.h>
 #include "libs/tsf.h"
 
 #define TML_IMPLEMENTATION
