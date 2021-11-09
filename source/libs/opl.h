@@ -793,6 +793,7 @@ void opl_emu_update_timer( struct opl_emu_t* emu, uint32_t tnum, uint32_t enable
 
 void opl_emu_generate( struct opl_emu_t* emu,short *output, uint32_t numsamples, float volume )
 {
+	volume = volume > 1.0f ? 1.0f : volume < 0.0f ? 0.0f : volume;
 	for (uint32_t samp = 0; samp < numsamples; samp++, output+=2)
 	{
 		// clock the system
