@@ -1858,7 +1858,7 @@ struct opl_t {
   struct opl_emu_t opl_emu;
   struct opl_timbre_t opl_gmtimbres[ 256 ];
   struct opl_timbre_t opl_gmtimbres_voice2[ 256 ]; /* second voice included in OP2 format */
-  bool is_op2; /* true if OP2 soundbank */
+  int is_op2; /* true if OP2 soundbank */
   enum op2_flags_t op2_flags[ 256 ]; /* OP2 format flags */
 };
 
@@ -2250,7 +2250,7 @@ opl_t* opl_create(void) {
   memcpy( opl->opl_gmtimbres, opl_gmtimbres_default, sizeof( opl_gmtimbres_default ) );
   opl_emu_init( &opl->opl_emu );
 
-  opl->is_op2 = false;
+  opl->is_op2 = 0;
   
   /* detect the hardware and return error if not found */
   oplregwr(opl, 0x04, 0x60); /* reset both timers by writing 60h to register 4 */
@@ -2601,7 +2601,7 @@ void opl_midi_noteoff(opl_t* opl, int channel, int note) {
 
 
 static int opl_loadbank_internal(opl_t* opl, char const* file, int offset) {
-  opl->is_op2 = false;
+  opl->is_op2 = 0;
   unsigned char buff[16];
   int i;
   /* open the IBK file */
@@ -2729,7 +2729,7 @@ int opl_loadbank_op2(opl_t* opl, void const* data, int size ) {
   }
   buff += 8;
   
-  opl->is_op2 = true;
+  opl->is_op2 = 1;
 
   /* load 128 instruments from the IBK file */
   for (i = 0; i < 175; i++) {
