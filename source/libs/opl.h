@@ -1831,7 +1831,7 @@ void opl_emu_fm_channel_output_rhythm_ch8(struct opl_emu_fm_channel* fmch,uint32
 // This is the number subtracted from the 2nd voice for an instrument for OP2 soundbanks
 // which causes those second voices to be replaced before their (more important) first voices
 // when the OPL voice channels are all used up
-#define OPL2_2NDVOICE_PRIORITY_PENALTY 16
+#define OP2_2NDVOICE_PRIORITY_PENALTY 16
 
 struct voicealloc_t {
   unsigned short priority;
@@ -2558,7 +2558,7 @@ void opl_midi_noteon_op2(opl_t* opl, int channel, int note, int velocity, int vi
   opl->voices2notes[voice].voiceindex = vindex;
   opl->notes2voices[channel][note][vindex] = voice;
   
-  if (vindex != 0) opl->voices2notes[voice].priority -= OPL2_2NDVOICE_PRIORITY_PENALTY; /* second OP2 voice has lower priority /*
+  if (vindex != 0) opl->voices2notes[voice].priority -= OP2_2NDVOICE_PRIORITY_PENALTY; /* second OP2 voice has lower priority /*
 
   /* set the requested velocity on the voice */
   voicevolume(opl, voice, timbre, velocity * opl->channelvol[channel] / 127);
