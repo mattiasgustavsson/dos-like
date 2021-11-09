@@ -3,7 +3,7 @@
 // The code ended up being really messy, mostly because I only find 10 minutes
 // here and there to work on it over the course of a few days. There are most
 // likely lots of bugs. I'd welcome pull requests with fixed and refactors ;-)
-//      /Mattuas Gustavsson
+//      /Mattias Gustavsson
 
 #include "dos.h"
 #include <stdio.h>
@@ -261,6 +261,7 @@ void help( void ) {
 
 
 #ifndef _WIN32 
+    #include <strings.h>
     #define stricmp strcasecmp
 #endif
 
@@ -336,6 +337,8 @@ int main( int argc, char* argv[] ) {
             waitvbl();
             continue;
         }
+        prev_mx = mx;
+        prev_my = my;
         mousepos( mx, my );
         first = 0;
         while( *chars ) {
