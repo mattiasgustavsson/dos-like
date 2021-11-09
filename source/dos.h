@@ -91,6 +91,7 @@ int installuserfont( char const* filename );
 
 
 enum {
+    DEFAULT_SOUNDBANK_NONE  = 0,
     DEFAULT_SOUNDBANK_AWE32 = 1,
     DEFAULT_SOUNDBANK_SB16  = 2,
 };
@@ -461,10 +462,10 @@ static void internals_create( int sound_buffer_size ) {
     internals->graphics.fonts[ DEFAULT_FONT_8X16 ] = internals_build_font( font8x16 );
     internals->graphics.fonts[ DEFAULT_FONT_9X16 ] = internals_build_font( font9x16 );
 
-    internals->audio.current_soundbank = DEFAULT_SOUNDBANK_AWE32;
+    internals->audio.current_soundbank = DEFAULT_SOUNDBANK_NONE;
     internals->audio.soundbanks_count = 3;
     internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].type = SOUNDBANK_TYPE_SF2;
-    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2 = tsf_load_memory( awe32rom, sizeof( awe32rom ) );
+    internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2 = NULL; // load when first used
     internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].data = NULL;
     internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].size = 0;
     internals->audio.soundbanks[ DEFAULT_SOUNDBANK_SB16 ].type = SOUNDBANK_TYPE_NONE;
@@ -1630,7 +1631,20 @@ int installusersoundbank( char const* filename ) {
 }
 
 
+static void load_default_sf2() {
+    // Delay loading of built-in soundfont until first used
+    // This also allows the linker to not include the entire large sf2 file if this function is not used
+    if (!internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2) {
+        internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2 = tsf_load_memory( awe32rom, sizeof( awe32rom ) );
+        if (internals->audio.current_soundbank == DEFAULT_SOUNDBANK_NONE) {
+            setsoundbank(DEFAULT_SOUNDBANK_AWE32);
+        }
+    }
+}
+
+
 void noteon( int channel, int note, int velocity) {
+    load_default_sf2();
     if( channel < 0 || channel > MUSIC_CHANNELS || note < 0 || note > 127 || velocity < 0 || velocity > 127 ) return;
     struct audio_command_t command;
     command.type = AUDIO_COMMAND_NOTE_ON;
@@ -1726,6 +1740,7 @@ void tml_mus_custom_free( void* ptr ) {
 
 
 struct music_t* loadmid( char const* filename ) {
+    load_default_sf2();
     tml_message* mid = tml_load_filename( filename );
     if( !mid ) return NULL;
     struct music_t* music = ( (struct music_t*)mid ) - 1;
@@ -1735,6 +1750,7 @@ struct music_t* loadmid( char const* filename ) {
 
 
 struct music_t* loadmus( char const* filename ) {
+    load_default_sf2();
     FILE* fp = fopen( filename, "rb" );
     fseek( fp, 0, SEEK_END );
     size_t sz = ftell( fp );
@@ -2791,7 +2807,6 @@ static int app_proc( app_t* app, void* user_data ) {
     struct sound_context_t sound_context;
     memset( &sound_context, 0, sizeof( sound_context ) );
     thread_mutex_init( &sound_context.mutex );
-    sound_context.soundfont = internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2;
     sound_context.opl = opl_create();
     sound_context.commands_count = 0;
     sound_context.current_music = NULL;
@@ -2799,6 +2814,7 @@ static int app_proc( app_t* app, void* user_data ) {
     sound_context.music_volume = 0;
     initsoundmode( internals->audio.soundmode, &sound_context.sound_freq, &sound_context.sound_8bit, &sound_context.sound_mono );
     app_sound( app, SOUND_BUFFER_SIZE * 2, app_sound_callback, &sound_context );
+    int previous_soundbank = internals->audio.current_soundbank;
 
     thread_atomic_int_inc( &internals->vbl.count );
     thread_signal_raise( &internals->vbl.signal );    
@@ -2814,7 +2830,6 @@ static int app_proc( app_t* app, void* user_data ) {
     int music_play_counter = 0;
 
     // Main loop
-    int previous_soundbank = internals->audio.current_soundbank;
     static APP_U32 screen_xbgr[ sizeof( internals->screen.buffer0 ) ];
     int width = 0;
     int height = 0;
