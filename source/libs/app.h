@@ -996,7 +996,10 @@ static int app_internal_opengl_init( app_t* app, struct app_internal_opengl_t* g
     gl->VertexAttribPointer( 0, 4, APP_GL_FLOAT, APP_GL_FALSE, 4 * sizeof( APP_GLfloat ), 0 );
 
     gl->GenTextures( 1, &gl->texture );
-    gl->Enable( APP_GL_TEXTURE_2D );
+    #ifndef APP_WASM
+        // This enable call is not necessary when using fragment shaders, avoid logged warnings in WebGL
+        gl->Enable( APP_GL_TEXTURE_2D );
+    #endif
     gl->ActiveTexture( APP_GL_TEXTURE0 );
     gl->BindTexture( APP_GL_TEXTURE_2D, gl->texture );
     gl->TexParameteri( APP_GL_TEXTURE_2D, APP_GL_TEXTURE_MIN_FILTER, APP_GL_NEAREST );

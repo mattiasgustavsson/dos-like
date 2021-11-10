@@ -863,14 +863,20 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
     crtemu_pc->BindFramebuffer( CRTEMU_PC_GL_FRAMEBUFFER, 0 );
 
     crtemu_pc->GenTextures( 1, &crtemu_pc->frametexture ); 
-    crtemu_pc->Enable( CRTEMU_PC_GL_TEXTURE_2D ); 
+    #ifndef CRTEMU_PC_WEBGL
+        // This enable call is not necessary when using fragment shaders, avoid logged warnings in WebGL
+        crtemu_pc->Enable( CRTEMU_PC_GL_TEXTURE_2D ); 
+    #endif
     crtemu_pc->ActiveTexture( CRTEMU_PC_GL_TEXTURE2 );
     crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->frametexture );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_MIN_FILTER, CRTEMU_PC_GL_LINEAR );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_MAG_FILTER, CRTEMU_PC_GL_LINEAR );
 
     crtemu_pc->GenTextures( 1, &crtemu_pc->backbuffer ); 
-    crtemu_pc->Enable( CRTEMU_PC_GL_TEXTURE_2D ); 
+    #ifndef CRTEMU_PC_WEBGL
+        // This enable call is not necessary when using fragment shaders, avoid logged warnings in WebGL
+        crtemu_pc->Enable( CRTEMU_PC_GL_TEXTURE_2D ); 
+    #endif
     crtemu_pc->ActiveTexture( CRTEMU_PC_GL_TEXTURE0 );
     crtemu_pc->BindTexture( CRTEMU_PC_GL_TEXTURE_2D, crtemu_pc->backbuffer );
     crtemu_pc->TexParameteri( CRTEMU_PC_GL_TEXTURE_2D, CRTEMU_PC_GL_TEXTURE_MIN_FILTER, CRTEMU_PC_GL_NEAREST );
