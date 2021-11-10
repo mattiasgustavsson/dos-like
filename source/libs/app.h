@@ -4113,6 +4113,10 @@ WAJIC_WITH_INIT(
         canvas.height = h;
         evts.push(1, canvas.width, canvas.height);
     }
+    function alias(el, a, b, c)
+    {
+        return el[a+c] || el['moz'+b+c] || el['webkit'+b+c] || el['ms'+b+c];
+    }
 ),
 void, app_js_setup_canvas, (int* out_width, int* out_height),
 {
@@ -4123,6 +4127,7 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
     aspect_ratio = canvas.width/canvas.height;
 
     var cancelEvent = function(e) { if (e.preventDefault) e.preventDefault(true); else if (e.stopPropagation) e.stopPropagation(true); else e.stopped = true; };
+    var documtEvent = function(t, f, a) { document.addEventListener(t, f); if (!a) { documtEvent('moz'+t, f, 1); documtEvent('webkit'+t, f, 1); documtEvent('ms'+t, f, 1); } };
     var windowEvent = function(t, f) { window.addEventListener(t, f, true); };
     var canvasEvent = function(t, f) { canvas.addEventListener(t, f, {capture:true,passive:false}); };
     windowEvent('resize', function() { update_canvas_size(canvas.clientWidth); });
@@ -4164,9 +4169,9 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
         cancelEvent(e);
     });
     canvasEvent('wheel', function(e) { evts.push(7, e.deltaY); cancelEvent(e); });
-    document.addEventListener('fullscreenchange', function()
+    documtEvent('fullscreenchange', function()
     {
-        fullscreen = document.fullscreenElement;
+        fullscreen = alias(document,'f','F','ullscreenElement') || alias(document,'f','F','ullScreenElement');
         if (fullscreen)
         {
             canvas.orgS = canvas.style.cssText;
@@ -4185,8 +4190,9 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
     WA.SetFullscreen = function(f)
     {
         if (!f == !fullscreen) return;
-        if (f) WA.canvas.requestFullscreen();
-        else document.exitFullscreen();
+        var el = (f ? WA.canvas : document);
+        var fn = (f ? (alias(el,'r','R','equestFullscreen') || alias(el,'r','R','equestFullScreen')) : (alias(el,'e','E','xitFullscreen') || alias(el,'c','C','ancelFullScreen')));
+        if (fn) fn.apply(el, []);
     };
 })
 
@@ -4564,11 +4570,17 @@ int, app_js_audio_needed, (bool has_focus),
     if (!audio_ctx)
     {
         if (audio_ctx === false) return 0;
-        try { (audio_ctx = new AudioContext()).createBuffer(1,1,44100).getChannelData(0); } catch (e) { }
+        try { (audio_ctx = new (alias(window,"","",'AudioContext'))()).createBuffer(1,1,44100).getChannelData(0); } catch (e) { }
         if (!audio_ctx) { audio_ctx = false; WA.print('Warning: WebAudio not supported\n'); return 0; }
         for (var i = 0; i != 10; i++) audio_bufs[i] = audio_ctx.createBuffer(2, 512, 44100);
     }
     var ct = audio_ctx.currentTime;
+    if (audio_ctx.state == 'suspended')
+    {
+        audio_done = ct;
+        audio_ctx.resume();
+        if (audio_ctx.state == 'suspended') return;
+    }
     if (audio_done < ct)
     {
         if (has_focus && (audio_miss += 2) > 7)
