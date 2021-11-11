@@ -2132,14 +2132,16 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
     #pragma warning( pop )
 
 
-    int const APP_MOD_NOREPEAT = 0x4000;
-    RegisterHotKey( app->hwnd, VK_VOLUME_MUTE, APP_MOD_NOREPEAT, VK_VOLUME_MUTE );
-    RegisterHotKey( app->hwnd, VK_VOLUME_DOWN, APP_MOD_NOREPEAT, VK_VOLUME_DOWN );
-    RegisterHotKey( app->hwnd, VK_VOLUME_UP, APP_MOD_NOREPEAT, VK_VOLUME_UP );
-    RegisterHotKey( app->hwnd, VK_MEDIA_NEXT_TRACK, APP_MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK );
-    RegisterHotKey( app->hwnd, VK_MEDIA_PREV_TRACK, APP_MOD_NOREPEAT, VK_MEDIA_PREV_TRACK );
-    RegisterHotKey( app->hwnd, VK_MEDIA_STOP, APP_MOD_NOREPEAT, VK_MEDIA_STOP );
-    RegisterHotKey( app->hwnd, VK_MEDIA_PLAY_PAUSE, APP_MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE );
+    #ifdef APP_ENABLE_MEDIA_KEYS
+        int const APP_MOD_NOREPEAT = 0x4000;
+        RegisterHotKey( app->hwnd, VK_VOLUME_MUTE, APP_MOD_NOREPEAT, VK_VOLUME_MUTE );
+        RegisterHotKey( app->hwnd, VK_VOLUME_DOWN, APP_MOD_NOREPEAT, VK_VOLUME_DOWN );
+        RegisterHotKey( app->hwnd, VK_VOLUME_UP, APP_MOD_NOREPEAT, VK_VOLUME_UP );
+        RegisterHotKey( app->hwnd, VK_MEDIA_NEXT_TRACK, APP_MOD_NOREPEAT, VK_MEDIA_NEXT_TRACK );
+        RegisterHotKey( app->hwnd, VK_MEDIA_PREV_TRACK, APP_MOD_NOREPEAT, VK_MEDIA_PREV_TRACK );
+        RegisterHotKey( app->hwnd, VK_MEDIA_STOP, APP_MOD_NOREPEAT, VK_MEDIA_STOP );
+        RegisterHotKey( app->hwnd, VK_MEDIA_PLAY_PAUSE, APP_MOD_NOREPEAT, VK_MEDIA_PLAY_PAUSE );
+    #endif
 
     ShowWindow( app->hwnd, SW_HIDE );
     // Windows specific OpenGL initialization
