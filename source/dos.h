@@ -2375,7 +2375,7 @@ int render_mus_opl( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, 
                 if( loop ) {
                     mus_restart( mus );
                 } else {
-                    memset( output, 0, remaining * 2 * sizeof( output ) );
+                    memset( output, 0, remaining * 2 * sizeof( *output ) );
                     return -1;
                 }
             } break;
