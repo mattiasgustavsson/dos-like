@@ -1,4 +1,13 @@
 /*
+This is a modified version of the original opblib.h/opblib.c (https://github.com/Enichan/OPBinaryLib)
+Basically, I have merged the two files into a stb-style single-file header-only C library.
+Define OPBLIB_IMPLEMENTATION before you include this file in *one* C/C++ file to create the implementation.
+I have also replaced the C initializers with initializing functions for compatibility with C++.
+I place all my changes under the same license as the original code (see below).
+                        / Mattias Gustavsson ( mattias@mattiasgustavsson.com )
+*/
+
+/*
 //  MIT License
 //
 //  Copyright (c) 2021 Eniko Fox/Emma Maassen
@@ -362,6 +371,14 @@ static void Log(const char* format, ...) {
     }
 }
 
+OPB_Command MakeCommand(uint16_t Addr, uint8_t Data, double Time) {
+    OPB_Command cmd;
+    cmd.Addr = Addr;
+    cmd.Data = Data;
+    cmd.Time = Time;
+    return cmd;
+}
+
 const char* OPB_GetFormatName(OPB_Format fmt) {
     switch (fmt) {
     default:
@@ -507,12 +524,30 @@ typedef struct Operator {
     int16_t WaveSelect;
 } Operator;
 
+Operator MakeOperator(int16_t Characteristic, int16_t AttackDecay, int16_t SustainRelease, int16_t WaveSelect) {
+    Operator op;
+    op.Characteristic = Characteristic;
+    op.AttackDecay = AttackDecay;
+    op.SustainRelease = SustainRelease;
+    op.WaveSelect = WaveSelect;
+    return op;
+}
+
 typedef struct Instrument {
     int16_t FeedConn;
     Operator Modulator;
     Operator Carrier;
     int Index;
 } Instrument;
+
+Instrument MakeInstrument(int16_t FeedConn, Operator Modulator, Operator Carrier, int Index) {
+    Instrument instrument;
+    instrument.FeedConn = FeedConn;
+    instrument.Modulator = Modulator;
+    instrument.Carrier = Carrier;
+    instrument.Index = Index;
+    return instrument;
+}
 
 static Context Context_New() {
     Context context;
@@ -1201,22 +1236,22 @@ int OPB_OplToBinary(OPB_Format format, OPB_Command* commandStream, size_t comman
 static int ReadInstrument(Context* context, Instrument* instr) {
     uint8_t buffer[9];
     READ(buffer, sizeof(uint8_t), 9, context);
-    *instr = (Instrument) {
+    *instr = MakeInstrument(
         buffer[0], // feedconn
-        {
+        MakeOperator(
             buffer[1], // modulator characteristic
             buffer[2], // modulator attack/decay
             buffer[3], // modulator sustain/release
-            buffer[4], // modulator wave select
-        },
-        {
+            buffer[4]  // modulator wave select
+        ),
+        MakeOperator(
             buffer[5], // carrier characteristic
             buffer[6], // carrier attack/decay
             buffer[7], // carrier sustain/release
-            buffer[8], // carrier wave select
-        },
+            buffer[8]  // carrier wave select
+        ),
         (int)context->Instruments.Count // instrument index
-    };
+    );
     return 0;
 }
 
@@ -1254,9 +1289,9 @@ static inline int AddToBuffer(Context* context, OPB_Command* buffer, int* index,
     return 0;
 }
 
-#define ADD_TO_BUFFER_IMPL(retvar, context, buffer, index, ...) \
+#define ADD_TO_BUFFER_IMPL(retvar, context, buffer, index, command) \
     { int retvar; \
-    if ((retvar = AddToBuffer(context, buffer, bufferIndex, (OPB_Command) __VA_ARGS__))) return retvar; }
+    if ((retvar = AddToBuffer(context, buffer, bufferIndex, command))) return retvar; }
 #define ADD_TO_BUFFER(context, buffer, index, ...) ADD_TO_BUFFER_IMPL(MACRO_CONCAT(__ret, __LINE__), context, buffer, index, __VA_ARGS__)
 
 static int ReadCommand(Context* context, OPB_Command* buffer, int* bufferIndex, int mask) {
@@ -1269,7 +1304,7 @@ static int ReadCommand(Context* context, OPB_Command* buffer, int* bufferIndex, 
         default: {
             uint8_t data;
             READ(&data, sizeof(uint8_t), 1, context);
-            ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)addr, data, context->Time });
+            ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)addr, data, context->Time ));
             break;
         }
         
@@ -1324,20 +1359,20 @@ static int ReadCommand(Context* context, OPB_Command* buffer, int* bufferIndex, 
             int car = mod + 3;
             int playOffset = ChannelToOffset[channel];
 
-            if (feedconn) ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_FEEDCONN + conn), (uint8_t)instr->FeedConn, context->Time });
-            if (modChr)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_CHARACTER + mod), (uint8_t)instr->Modulator.Characteristic, context->Time });
-            if (modLvl)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_LEVELS + mod), modLvlData, context->Time });
-            if (modAtk)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_ATTACK + mod), (uint8_t)instr->Modulator.AttackDecay, context->Time });
-            if (modSus)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_SUSTAIN + mod), (uint8_t)instr->Modulator.SustainRelease, context->Time });
-            if (modWav)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_WAVE + mod), (uint8_t)instr->Modulator.WaveSelect, context->Time });
-            if (carChr)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_CHARACTER + car), (uint8_t)instr->Carrier.Characteristic, context->Time });
-            if (carLvl)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_LEVELS + car), carLvlData, context->Time });
-            if (carAtk)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_ATTACK + car), (uint8_t)instr->Carrier.AttackDecay, context->Time });
-            if (carSus)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_SUSTAIN + car), (uint8_t)instr->Carrier.SustainRelease, context->Time });
-            if (carWav)   ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_WAVE + car), (uint8_t)instr->Carrier.WaveSelect, context->Time });
+            if (feedconn) ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_FEEDCONN + conn), (uint8_t)instr->FeedConn, context->Time ));
+            if (modChr)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_CHARACTER + mod), (uint8_t)instr->Modulator.Characteristic, context->Time ));
+            if (modLvl)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_LEVELS + mod), modLvlData, context->Time ));
+            if (modAtk)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_ATTACK + mod), (uint8_t)instr->Modulator.AttackDecay, context->Time ));
+            if (modSus)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_SUSTAIN + mod), (uint8_t)instr->Modulator.SustainRelease, context->Time ));
+            if (modWav)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_WAVE + mod), (uint8_t)instr->Modulator.WaveSelect, context->Time ));
+            if (carChr)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_CHARACTER + car), (uint8_t)instr->Carrier.Characteristic, context->Time ));
+            if (carLvl)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_LEVELS + car), carLvlData, context->Time ));
+            if (carAtk)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_ATTACK + car), (uint8_t)instr->Carrier.AttackDecay, context->Time ));
+            if (carSus)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_SUSTAIN + car), (uint8_t)instr->Carrier.SustainRelease, context->Time ));
+            if (carWav)   ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_WAVE + car), (uint8_t)instr->Carrier.WaveSelect, context->Time ));
             if (isPlay) {
-                ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_FREQUENCY + playOffset), freq, context->Time });
-                ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(REG_NOTE + playOffset), note, context->Time });
+                ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_FREQUENCY + playOffset), freq, context->Time ));
+                ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(REG_NOTE + playOffset), note, context->Time ));
             }
 
             break;
@@ -1365,22 +1400,22 @@ static int ReadCommand(Context* context, OPB_Command* buffer, int* bufferIndex, 
             uint8_t freq = freqNote[0];
             uint8_t note = freqNote[1];
 
-            ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(addr - (OPB_CMD_NOTEON - REG_FREQUENCY)), freq, context->Time });
-            ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)(addr - (OPB_CMD_NOTEON - REG_NOTE)), (uint8_t)(note & 0b00111111), context->Time });
+            ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(addr - (OPB_CMD_NOTEON - REG_FREQUENCY)), freq, context->Time ));
+            ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)(addr - (OPB_CMD_NOTEON - REG_NOTE)), (uint8_t)(note & 0b00111111), context->Time ));
 
             if ((note & 0b01000000) != 0) {
                 // set modulator volume
                 uint8_t vol;
                 READ(&vol, sizeof(uint8_t), 1, context);
                 int reg = REG_LEVELS + OperatorOffsets[ChannelToOp[channel]];
-                ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)reg, vol, context->Time });
+                ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)reg, vol, context->Time ));
             }
             if ((note & 0b10000000) != 0) {
                 // set carrier volume
                 uint8_t vol;
                 READ(&vol, sizeof(uint8_t), 1, context);
                 int reg = REG_LEVELS + 3 + OperatorOffsets[ChannelToOp[channel]];
-                ADD_TO_BUFFER(context, buffer, bufferIndex, { (uint16_t)reg, vol, context->Time });
+                ADD_TO_BUFFER(context, buffer, bufferIndex, MakeCommand( (uint16_t)reg, vol, context->Time ));
             }
             break;
         }
