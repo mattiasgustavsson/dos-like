@@ -80,6 +80,8 @@ int opl_loadbank_op2(opl_t* opl, void const* data, int size );
 
 void opl_render( opl_t* opl, short* sample_pairs, int sample_pairs_count, float volume );
 
+void opl_write( opl_t* opl, int count, unsigned short* regs, unsigned char* data );
+
 #endif /* opl_h */
 
 
@@ -1868,9 +1870,49 @@ void oplregwr( opl_t* opl, uint16_t reg, uint8_t data ) {
     opl_emu_write( &opl->opl_emu, reg, data );
 }
 
+
 void opl_render( opl_t* opl, short* sample_pairs, int sample_pairs_count, float volume ) {
     memset( sample_pairs, 0, sample_pairs_count * 2 * sizeof( short ) );
     opl_emu_generate( &opl->opl_emu, sample_pairs, sample_pairs_count, volume );
+}
+
+
+void opl_write( opl_t* opl, int count, unsigned short* regs, unsigned char* data ) {
+    struct opl_emu_t* emu = &opl->opl_emu;
+    for( int i = 0; i < count; ++i ) {
+        uint16_t regnum = regs[ i ];
+        uint8_t value = data[ i ];
+	    // special case: writes to the mode register can impact IRQs;
+	    // schedule these writes to ensure ordering with timers
+	    if (regnum == OPL_EMU_REGISTERS_REG_MODE)
+	    {
+    //		emu->m_intf.opl_emu_sync_mode_write(data);
+		    continue;;
+	    }
+
+	    // for now just mark all channels as modified
+	    emu->m_modified_channels = OPL_EMU_REGISTERS_ALL_CHANNELS;
+
+	    // most writes are passive, consumed only when needed
+	    uint32_t keyon_channel;
+	    uint32_t keyon_opmask;
+	    if (opl_emu_registers_write(&emu->m_regs,regnum, value, &keyon_channel, &keyon_opmask))
+	    {
+		    // handle writes to the keyon register(s)
+		    if (keyon_channel < OPL_EMU_REGISTERS_CHANNELS)
+		    {
+			    // normal channel on/off
+			    opl_emu_fm_channel_keyonoff(&emu->m_channel[keyon_channel],keyon_opmask, OPL_EMU_KEYON_NORMAL, keyon_channel);
+		    }
+		    else if (OPL_EMU_REGISTERS_CHANNELS >= 9 && keyon_channel == OPL_EMU_REGISTERS_RHYTHM_CHANNEL)
+		    {
+			    // special case for the OPL rhythm channels
+			    opl_emu_fm_channel_keyonoff(&emu->m_channel[6],opl_emu_bitfield(keyon_opmask, 4,1) ? 3 : 0, OPL_EMU_KEYON_RHYTHM, 6);
+			    opl_emu_fm_channel_keyonoff(&emu->m_channel[7],opl_emu_bitfield(keyon_opmask, 0,1) | (opl_emu_bitfield(keyon_opmask, 3,1) << 1), OPL_EMU_KEYON_RHYTHM, 7);
+			    opl_emu_fm_channel_keyonoff(&emu->m_channel[8],opl_emu_bitfield(keyon_opmask, 2,1) | (opl_emu_bitfield(keyon_opmask, 1,1) << 1), OPL_EMU_KEYON_RHYTHM, 8);
+		    }
+	    }
+    }
 }
 
 

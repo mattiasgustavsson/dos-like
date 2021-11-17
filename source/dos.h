@@ -109,6 +109,7 @@ struct music_t;
 struct music_t* loadmid( char const* filename );
 struct music_t* loadmus( char const* filename );
 struct music_t* loadmod( char const* filename );
+struct music_t* loadopb( char const* filename );
 void playmusic( struct music_t* music, int loop, int volume );
 void stopmusic( void );
 int musicplaying( void );
@@ -208,6 +209,7 @@ int mousey( void );
 #include "libs/dr_wav.h"
 #include "libs/frametimer.h"
 #include "libs/mus.h"
+#include "libs/opblib.h"
 #include "libs/opl.h"
 #include "libs/pixelfont.h"
 #include "libs/thread.h"
@@ -1698,6 +1700,7 @@ enum music_format_t {
     MUSIC_FORMAT_MID,
     MUSIC_FORMAT_MUS,
     MUSIC_FORMAT_MOD,
+    MUSIC_FORMAT_OPB,
 };
 
 
@@ -1772,6 +1775,58 @@ struct music_t* loadmod( char const* filename ) {
     }   
     modctx->modfile = (muchar*)file;
     modctx->modfilesize = (int) sz;
+    return music;
+}
+
+
+struct opb_context_t {
+    OPB_Command* commands;
+    int capacity;
+    int count;
+};
+
+
+int opb_callback( OPB_Command* commands, size_t count, void* user_data ) {
+    struct opb_context_t* context = (struct opb_context_t*) user_data;
+    if( context->count + count > context->capacity ) {
+        context->capacity = context->count + count > context->capacity * 2 ? context->count + count : context->capacity * 2;
+        context->commands = (OPB_Command*) realloc( context->commands, sizeof( OPB_Command ) * context->capacity );        
+    }
+    memcpy( context->commands + context->count, commands, sizeof( OPB_Command ) * count );
+    context->count += count;
+    return 0;
+}
+
+
+struct opb_t {
+    int position;
+    double accumulated_time;
+    int commands_count;
+    OPB_Command commands[ 1 ];
+};
+
+
+struct music_t* loadopb( char const* filename ) {
+    struct opb_context_t context;
+    context.count = 0;
+    context.capacity = 4096;
+    context.commands = (OPB_Command*) malloc( sizeof( OPB_Command ) * context.capacity );
+
+    int res = OPB_FileToOpl( filename, opb_callback, &context );
+    
+    if( res != 0 || context.count == 0) {
+        free( context.commands );
+        return NULL;
+    }
+
+    struct music_t* music = (struct music_t*)malloc( sizeof( struct music_t ) + sizeof( struct opb_t ) + sizeof( OPB_Command ) * ( context.count - 1 ) );
+    struct opb_t* opb = (struct opb_t*)( music + 1 );
+    music->format = MUSIC_FORMAT_OPB;
+    opb->position = 0;
+    opb->accumulated_time = 0.0;
+    opb->commands_count = context.count;
+    memcpy( opb->commands, context.commands, sizeof( OPB_Command ) * context.count );
+    free( context.commands );
     return music;
 }
 
@@ -2574,6 +2629,58 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
         if( context->music_next == NULL ) {
             context->music_done = true;
         }        
+    } else if( !context->music_done && context->current_music && context->current_music->format == MUSIC_FORMAT_OPB ) {
+        struct opb_t* opb = (struct opb_t*)( context->current_music + 1 );
+        double current_time = opb->accumulated_time;
+        opb->accumulated_time += sample_pairs_count / 44100.0;
+        short* outsamples = modbuffer;
+        int samples_remaining = sample_pairs_count;
+        int buffered_count = 0;
+        uint16_t buffered_regs[ 256 ];
+        uint8_t buffered_data[ 256 ];
+        while( opb->position < opb->commands_count ) {
+            OPB_Command cmd = opb->commands[ opb->position ];
+            if( cmd.Time >= opb->accumulated_time ) {
+                break;
+            }
+            if( cmd.Time > current_time ) {
+                int samples_to_render = (int)( ( cmd.Time - current_time ) * 44100.0 );
+                if( samples_to_render > 0 ) {
+                    if( samples_to_render > samples_remaining ) {
+                        samples_to_render = samples_remaining;
+                    }
+                    opl_write( context->opl, buffered_count, buffered_regs, buffered_data );
+                    buffered_count = 0;
+                    opl_render( context->opl, outsamples, samples_to_render, context->music_volume / 255.0f );
+                    outsamples += samples_to_render * 2;
+                    samples_remaining -= samples_to_render;
+                    if( samples_remaining <= 0 ) {
+                        break;
+                    }
+                    current_time = cmd.Time;
+                }
+            }
+            buffered_regs[ buffered_count ] = cmd.Addr;
+            buffered_data[ buffered_count ] = cmd.Data;
+            ++buffered_count;
+            if( buffered_count >= 256 ) {
+                opl_write( context->opl, buffered_count, buffered_regs, buffered_data );
+                buffered_count = 0;
+            }
+            ++opb->position;
+        }
+        opl_write( context->opl, buffered_count, buffered_regs, buffered_data );
+        buffered_count = 0;
+        if( samples_remaining > 0 ) {
+            opl_render( context->opl, outsamples, samples_remaining, context->music_volume / 255.0f );
+        }
+        for( int i = 0; i < sample_pairs_count * 2; ++i ) {
+            int s = ( modbuffer[ i ] );
+            s += sample_pairs[ i ];
+            if( s > 32700 ) s = 32700;
+            if( s < -32700 ) s = -32700;
+            sample_pairs[ i ] = (short)( s );
+        }
     } else {
         if( context->soundfont ) {
             if( context->commands_count > 0 ) {
@@ -3046,6 +3153,11 @@ static int app_proc( app_t* app, void* user_data ) {
             } else if( current_music->format == MUSIC_FORMAT_MOD ) {
                 jar_mod_context_t* modctx = (jar_mod_context_t*)( current_music + 1 );        
                 jar_mod_seek_start( modctx );
+            } else if( current_music->format == MUSIC_FORMAT_OPB ) {
+                struct opb_t* opb = (struct opb_t*)( current_music + 1 );        
+                opb->position = 0;
+                opb->accumulated_time = 0.0;
+                opl_clear( sound_context.opl );
             }
             sound_context.music_msec = 0.0;
             sound_context.music_done = false;
@@ -3228,6 +3340,9 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #define MUS_MALLOC tml_mus_custom_malloc
 #define MUS_FREE tml_mus_custom_free
 #include "libs/mus.h"
+
+#define OPBLIB_IMPLEMENTATION
+#include "libs/opblib.h"
 
 #define OPL_IMPLEMENTATION
 #include "libs/opl.h"
