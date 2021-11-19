@@ -256,7 +256,7 @@ static const char* GetFilename(const char* path) {
     return lastFwd > lastBck ? lastFwd + 1 : lastBck + 1;
 }
 
-static const char* GetSourceFilename() {
+static const char* GetSourceFilename(void) {
     return GetFilename(__FILE__);
 }
 
@@ -549,7 +549,7 @@ Instrument MakeInstrument(int16_t FeedConn, Operator Modulator, Operator Carrier
     return instrument;
 }
 
-static Context Context_New() {
+static Context Context_New(void) {
     Context context;
     memset(&context, 0, sizeof(Context));
 

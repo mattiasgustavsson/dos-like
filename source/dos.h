@@ -216,7 +216,12 @@ int mousey( void );
 #include "libs/tsf.h"
 
 #define JAR_MOD_IMPLEMENTATION
+#pragma warning( push )
+#pragma warning( disable: 4100 )
+#pragma warning( disable: 4242 )
+#pragma warning( disable: 4244 )
 #include "libs/jar_mod.h"
+#pragma warning( pop )
 
 #ifdef _WIN32
 #pragma warning( push )
@@ -1594,9 +1599,9 @@ int installusersoundbank( char const* filename ) {
     if( !pext || strlen( pext ) != 4 ) return 0;
     char ext[4] = { 0 };
     memcpy( ext, pext + 1, 3 );
-    ext[0]=tolower(ext[0]);
-    ext[1]=tolower(ext[1]);
-    ext[2]=tolower(ext[2]);
+    ext[0]=(char)tolower(ext[0]);
+    ext[1]=(char)tolower(ext[1]);
+    ext[2]=(char)tolower(ext[2]);
     enum soundbank_type_t type = SOUNDBANK_TYPE_NONE;
     if( strcmp( ext, "sf2" ) == 0 ) {
         type = SOUNDBANK_TYPE_SF2;
@@ -1618,7 +1623,7 @@ int installusersoundbank( char const* filename ) {
     
     internals->audio.soundbanks[ internals->audio.soundbanks_count ].type = type;
     if( type == SOUNDBANK_TYPE_SF2 ) {
-        internals->audio.soundbanks[ internals->audio.soundbanks_count ].sf2 = tsf_load_memory( data, sz );
+        internals->audio.soundbanks[ internals->audio.soundbanks_count ].sf2 = tsf_load_memory( data, (int)sz );
         internals->audio.soundbanks[ internals->audio.soundbanks_count ].data = NULL;
         internals->audio.soundbanks[ internals->audio.soundbanks_count ].size = 0;
         free( data );
@@ -1788,12 +1793,12 @@ struct opb_context_t {
 
 int opb_callback( OPB_Command* commands, size_t count, void* user_data ) {
     struct opb_context_t* context = (struct opb_context_t*) user_data;
-    if( context->count + count > context->capacity ) {
-        context->capacity = context->count + count > context->capacity * 2 ? context->count + count : context->capacity * 2;
+    if( context->count + (int)count > context->capacity ) {
+        context->capacity = context->count + (int)count > context->capacity * 2 ? context->count + (int)count : context->capacity * 2;
         context->commands = (OPB_Command*) realloc( context->commands, sizeof( OPB_Command ) * context->capacity );        
     }
     memcpy( context->commands + context->count, commands, sizeof( OPB_Command ) * count );
-    context->count += count;
+    context->count += (int)count;
     return 0;
 }
 
@@ -2718,8 +2723,8 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
         } else {
             if( context->commands_count > 0 ) {
                 int current_stamp = context->commands[ 0 ].frame_stamp;
-                for( int i = 0; i < context->commands_count; ++i ) {
-                    struct audio_command_t* cmd = &context->commands[ i ];
+                for( int j = 0; j < context->commands_count; ++j ) {
+                    struct audio_command_t* cmd = &context->commands[ j ];
                     if( cmd->frame_stamp != current_stamp ) {
                         if( sample_pairs_count > 0 ) {
                             opl_render( context->opl, modbuffer, 735, 1.0f );
@@ -3109,7 +3114,7 @@ static int app_proc( app_t* app, void* user_data ) {
             //    opl_loadbank_ibk( sound_context.opl, internals->audio.soundbanks[ current_soundbank ].data, internals->audio.soundbanks[ current_soundbank ].size );
             //    sound_context.soundfont = NULL;
             } else if( type == SOUNDBANK_TYPE_OP2 ) {
-                opl_loadbank_op2( sound_context.opl, internals->audio.soundbanks[ current_soundbank ].data, internals->audio.soundbanks[ current_soundbank ].size );
+                opl_loadbank_op2( sound_context.opl, internals->audio.soundbanks[ current_soundbank ].data, (int)internals->audio.soundbanks[ current_soundbank ].size );
                 sound_context.soundfont = NULL;
             } else if( type == SOUNDBANK_TYPE_NONE ) {
                 opl_destroy( sound_context.opl );
@@ -3342,10 +3347,27 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #include "libs/mus.h"
 
 #define OPBLIB_IMPLEMENTATION
+#pragma warning( push )
+#pragma warning( disable: 4189 )
+#pragma warning( disable: 4204 )
+#pragma warning( disable: 4244 )
+#pragma warning( disable: 4296 )
+#pragma warning( disable: 4388 )
+#pragma warning( disable: 4457 )
+#pragma warning( disable: 4706 )
 #include "libs/opblib.h"
+#pragma warning( pop )
 
 #define OPL_IMPLEMENTATION
+#pragma warning( push )
+#pragma warning( disable: 4100 )
+#pragma warning( disable: 4127 )
+#pragma warning( disable: 4189 )
+#pragma warning( disable: 4242 )
+#pragma warning( disable: 4244 )
+#pragma warning( disable: 4245 )
 #include "libs/opl.h"
+#pragma warning( pop )
 
 #define PIXELFONT_IMPLEMENTATION
 #define PIXELFONT_BUILDER_IMPLEMENTATION
