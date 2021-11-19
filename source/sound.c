@@ -10,6 +10,7 @@ int main( int argc, char* argv[] ) {
     struct music_t* mus = loadmus( "files/doom.mus" );
     struct music_t* mid = loadmid( "files/simon.mid" );
     struct music_t* mod = loadmod( "files/cfodder.mod" );
+    struct music_t* opb = loadopb( "files/doom.opb" );
     struct sound_t* wav = loadwav( "files/soundcard.wav" );
     int doom_soundbank = installusersoundbank( "files/doom.op2" );
     int use_awe32 = 1;
@@ -27,7 +28,8 @@ int main( int argc, char* argv[] ) {
     gotoxy( 0, 11 ); cputs( "0 - Sound mode 5khz 8bit mono" );
     gotoxy( 0, 12 ); cputs( "A - Use AWE32 for MIDI/MUS (default)" );
     gotoxy( 0, 13 ); cputs( "S - Use SoundBlaster16 for MIDI/MUS" );
-    gotoxy( 0, 15 ); cputs( "ESC - quit" );
+    gotoxy( 0, 14 ); cputs( "O - Play OPB song" );
+    gotoxy( 0, 16 ); cputs( "ESC - quit" );
     cursoff();
     while( !shuttingdown() ) {
         char key = *readchars();
@@ -49,6 +51,9 @@ int main( int argc, char* argv[] ) {
         }
         if( key == '3' ) {
             playmusic( mod, 0, 255 );
+        }
+        if( key == 'O' || key == 'o' ) {
+            playmusic( opb, 0, 255 );
         }
         if( key == '4' ) {
             playsound( 0, wav, 0, 128 );
