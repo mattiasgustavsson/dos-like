@@ -1476,26 +1476,27 @@ static int ReadOpbDefault(Context* context) {
 }
 
 #define RAW_READBUFFER_SIZE 256
-
-typedef struct RawOpbEntry {
-    uint16_t Elapsed;
-    uint16_t Addr;
-    uint8_t Data;
-} RawOpbEntry;
+#define RAW_ENTRY_SIZE 5
 
 static int ReadOpbRaw(Context* context) {
     double time = 0;
-    RawOpbEntry buffer[RAW_READBUFFER_SIZE];
+    uint8_t buffer[RAW_READBUFFER_SIZE * RAW_ENTRY_SIZE];
     OPB_Command commandStream[RAW_READBUFFER_SIZE];
 
     size_t itemsRead;
-    while ((itemsRead = context->Read(buffer, sizeof(RawOpbEntry), RAW_READBUFFER_SIZE, context->UserData)) > 0) {
-        for (int i = 0; i < itemsRead; i++) {
-            time += buffer[i].Elapsed / 1000.0;
+    while ((itemsRead = context->Read(buffer, RAW_ENTRY_SIZE, RAW_READBUFFER_SIZE, context->UserData)) > 0) {
+        uint8_t* value = buffer;
+
+        for (int i = 0; i < itemsRead; i++, value += RAW_ENTRY_SIZE) {
+            uint16_t elapsed = (value[0] << 8) | value[1];
+            uint16_t addr = (value[2] << 8) | value[3];
+            uint8_t data = value[4];
+
+            time += elapsed / 1000.0;
             
             OPB_Command cmd = {
-                buffer[i].Addr,
-                buffer[i].Data,
+                addr,
+                data,
                 time
             };
             commandStream[i] = cmd;
