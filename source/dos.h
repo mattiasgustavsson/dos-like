@@ -1719,6 +1719,7 @@ void noteon( int channel, int note, int velocity) {
 
 
 void noteoff( int channel, int note ) {
+    load_default_sf2();
     if( channel < 0 || channel > MUSIC_CHANNELS || note < 0 || note > 127 ) return;
     struct audio_command_t command;
     command.type = AUDIO_COMMAND_NOTE_OFF;
@@ -1735,6 +1736,7 @@ void noteoff( int channel, int note ) {
 
 
 void allnotesoff( int channel ) {
+    load_default_sf2();
     if( channel < 0 || channel > MUSIC_CHANNELS ) return;
     struct audio_command_t command;
     command.type = AUDIO_COMMAND_NOTE_OFF_ALL;
@@ -1750,6 +1752,7 @@ void allnotesoff( int channel ) {
 
 
 void setinstrument( int channel, int instrument ) {
+    load_default_sf2();
     if( channel < 0 || channel > MUSIC_CHANNELS || instrument < 0 || instrument > 128 ) return;
     struct audio_command_t command;
     command.type = AUDIO_COMMAND_SET_INSTRUMENT;
