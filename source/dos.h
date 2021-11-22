@@ -212,7 +212,6 @@ int mousey( void );
 #include "libs/opblib.h"
 #include "libs/opl.h"
 #include "libs/pixelfont.h"
-#include "libs/thread.h"
 #include "libs/tsf.h"
 
 #define JAR_MOD_IMPLEMENTATION
@@ -232,7 +231,6 @@ int mousey( void );
 #pragma warning( pop)
 #endif
 
-
 #ifdef _WIN32
 #pragma warning( push )
 #pragma warning( disable: 4024 )
@@ -249,9 +247,26 @@ int mousey( void );
 #include "libs/awe32rom.h"
 #include "libs/crtframe.h"
 
-#ifdef __wasm__
+#ifndef __wasm__
+#include "libs/thread.h"
+#else
 #define WA_CORO_IMPLEMENT_NANOSLEEP
 #include <wajic_coro.h>
+// dummy replacement for thread.h on WASM
+typedef char thread_mutex_t;
+#define thread_mutex_init(mutex)
+#define thread_mutex_term(mutex)
+#define thread_mutex_lock(mutex)
+#define thread_mutex_unlock(mutex)
+typedef char thread_signal_t;
+#define thread_signal_init(signal)
+#define thread_signal_term(signal)
+#define thread_signal_raise(signal)
+#define thread_signal_wait(signal, timeout) 1
+typedef int thread_atomic_int_t;
+#define thread_atomic_int_store(atomic, desired) *(atomic) = (desired)
+#define thread_atomic_int_load(atomic) (*(atomic))
+#define thread_atomic_int_inc(atomic) ((*(atomic))++)
 #endif
 
 static uint32_t default_palette[ 256 ] = {
@@ -2969,8 +2984,7 @@ static int app_proc( app_t* app, void* user_data ) {
     #else
     // WebAssembly has no real threads so we use coroutines which can switch context between two
     // callstacks to simulate the behavior from native platforms
-    WaCoro user_coro = WaCoroInitNew(user_thread_proc, "user_thread_proc", &user_thread_context,
-        THREAD_STACK_SIZE_DEFAULT);
+    WaCoro user_coro = WaCoroInitNew( user_thread_proc, "user_thread_proc", &user_thread_context, 0 );
     WaCoroSwitch(user_coro);
     internals->wasm.user_coro = user_coro; // only now internals exists
     #endif
@@ -3474,8 +3488,10 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
     static BOOL (*SleepConditionVariableCS)( PCONDITION_VARIABLE ConditionVariable, PCRITICAL_SECTION CriticalSection, DWORD dwMilliseconds );
 #endif
 
+#ifndef __wasm__
 #define THREAD_IMPLEMENTATION
 #include "libs/thread.h"
+#endif
 
 #define TSF_IMPLEMENTATION
 #define TSF_POW     pow
