@@ -91,7 +91,6 @@ int installuserfont( char const* filename );
 
 
 enum {
-    DEFAULT_SOUNDBANK_NONE  = 0,
     DEFAULT_SOUNDBANK_AWE32 = 1,
     DEFAULT_SOUNDBANK_SB16  = 2,
 };
@@ -329,6 +328,9 @@ pixelfont_t* internals_build_font( uint32_t* font ) {
     pixelfont_builder_destroy( builder );
     return output;
 }
+
+
+#define DEFAULT_SOUNDBANK_NONE 0
 
 
 enum audio_command_type_t {
