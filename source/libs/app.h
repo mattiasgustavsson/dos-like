@@ -4110,18 +4110,18 @@ struct app_t
 WAJIC_WITH_INIT(
 (
     var evts = [], evtcursor = 0, dpr = window.devicePixelRatio||1, canvas, aspect_ratio, fullscreen;
-    function update_canvas_size(w)
+    var update_canvas_size = (w)=>
     {
         var h = (w *= dpr)/aspect_ratio|0;
         if (w<32 || h<32 || (w == canvas.width && h == canvas.height) || fullscreen) return;
         canvas.width = w;
         canvas.height = h;
         evts.push(1, canvas.width, canvas.height);
-    }
-    function alias(el, a, b, c)
+    };
+    var alias = (el, a, b, c)=>
     {
         return el[a+c] || el['moz'+b+c] || el['webkit'+b+c] || el['ms'+b+c];
-    }
+    };
 ),
 void, app_js_setup_canvas, (int* out_width, int* out_height),
 {
@@ -4131,25 +4131,25 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
     MU32[out_height>>2] = canvas.clientHeight;
     aspect_ratio = canvas.width/canvas.height;
 
-    var cancelEvent = function(e) { if (e.preventDefault) e.preventDefault(true); else if (e.stopPropagation) e.stopPropagation(true); else e.stopped = true; };
-    var documtEvent = function(t, f, a) { document.addEventListener(t, f); if (!a) { documtEvent('moz'+t, f, 1); documtEvent('webkit'+t, f, 1); documtEvent('ms'+t, f, 1); } };
-    var windowEvent = function(t, f) { window.addEventListener(t, f, true); };
-    var canvasEvent = function(t, f) { canvas.addEventListener(t, f, {capture:true,passive:false}); };
-    windowEvent('resize', function() { update_canvas_size(canvas.clientWidth); });
-    windowEvent('focus', function() { evts.push(2, 1, 0); });
-    windowEvent('blur',  function() { evts.push(2, (fullscreen?1:0), 0); });
-    windowEvent('keydown', function(e)
+    var cancelEvent = (e)=>{ if (e.preventDefault) e.preventDefault(true); else if (e.stopPropagation) e.stopPropagation(true); else e.stopped = true; };
+    var documtEvent = (t, f, a)=>{ document.addEventListener(t, f); if (!a) { documtEvent('moz'+t, f, 1); documtEvent('webkit'+t, f, 1); documtEvent('ms'+t, f, 1); } };
+    var windowEvent = (t, f)=>{ window.addEventListener(t, f, true); };
+    var canvasEvent = (t, f)=>{ canvas.addEventListener(t, f, {capture:true,passive:false}); };
+    windowEvent('resize', ()=>{ update_canvas_size(canvas.clientWidth); });
+    windowEvent('focus', ()=>{ evts.push(2, 1, 0); });
+    windowEvent('blur',  ()=>{ evts.push(2, (fullscreen?1:0), 0); });
+    windowEvent('keydown', (e)=>
     {
         evts.push(3, 1, e.keyCode);
         if (e.key.length == 1 && e.key.charCodeAt() < 128 && !e.ctrlKey) evts.push(4, e.key.charCodeAt(), 0);
         cancelEvent(e);
     });
-    windowEvent('keyup',   function(e)
+    windowEvent('keyup',   (e)=>
     {
         evts.push(3, 0, e.keyCode);
         cancelEvent(e);
     });
-    canvasEvent('mousemove', function(e)
+    canvasEvent('mousemove', (e)=>
     {
         evts.push(5,
             (e.offsetX * canvas.width /  canvas.clientWidth )|0,
@@ -4157,7 +4157,7 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
         cancelEvent(e);
     });
     var buttons = 0;
-    canvasEvent('mousedown', function(e)
+    canvasEvent('mousedown', (e)=>
     {
         var btn = (1<<e.button);
         if (buttons & btn) return;
@@ -4165,7 +4165,7 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
         evts.push(6, 1, e.button);
         cancelEvent(e);
     });
-    windowEvent('mouseup', function(e)
+    windowEvent('mouseup', (e)=>
     {
         var btn = (1<<e.button);
         if (!(buttons & btn)) return;
@@ -4173,8 +4173,8 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
         evts.push(6, 0, e.button);
         cancelEvent(e);
     });
-    canvasEvent('wheel', function(e) { evts.push(7, e.deltaY); cancelEvent(e); });
-    documtEvent('fullscreenchange', function()
+    canvasEvent('wheel', (e)=>{ evts.push(7, e.deltaY); cancelEvent(e); });
+    documtEvent('fullscreenchange', ()=>
     {
         fullscreen = alias(document,'f','F','ullscreenElement') || alias(document,'f','F','ullScreenElement');
         if (fullscreen)
@@ -4192,7 +4192,7 @@ void, app_js_setup_canvas, (int* out_width, int* out_height),
             update_canvas_size(canvas.orgW);
         }
     });
-    WA.SetFullscreen = function(f)
+    WA.SetFullscreen = (f)=>
     {
         if (!f == !fullscreen) return;
         var el = (f ? WA.canvas : document);
@@ -4569,6 +4569,13 @@ app_displays_t app_displays( app_t* app )
 WAJIC_WITH_INIT(
 (
     var audio_ctx, audio_done = 0, audio_latency = 2048, audio_bufs = [], audio_bufidx = 0, audio_miss = 0;
+    var start_audio = ()=>
+    {
+        if (audio_ctx.state == 'running') return 1;
+        audio_done = audio_ctx.currentTime;
+        audio_ctx.resume();
+    };
+    var set_start_audio_event = (name)=>document.addEventListener(name, start_audio, {once:true});
 ),
 int, app_js_audio_needed, (bool has_focus),
 {
@@ -4578,14 +4585,10 @@ int, app_js_audio_needed, (bool has_focus),
         try { (audio_ctx = new (alias(window,"","",'AudioContext'))()).createBuffer(1,1,44100).getChannelData(0); } catch (e) { }
         if (!audio_ctx) { audio_ctx = false; WA.print('Warning: WebAudio not supported\n'); return 0; }
         for (var i = 0; i != 10; i++) audio_bufs[i] = audio_ctx.createBuffer(2, 512, 44100);
+        if (!start_audio()) { set_start_audio_event('click'); set_start_audio_event('touchstart'); set_start_audio_event('keydown'); }
     }
+    if (!start_audio() && !start_audio()) return 0;
     var ct = audio_ctx.currentTime;
-    if (audio_ctx.state == 'suspended')
-    {
-        audio_done = ct;
-        audio_ctx.resume();
-        if (audio_ctx.state == 'suspended') return;
-    }
     if (audio_done < ct)
     {
         if (has_focus && (audio_miss += 2) > 7)
