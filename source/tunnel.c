@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     float ratio = 32.0;
     //these formulas are changed to work with the new center of the tables
     distance = (int)(ratio * texHeight / sqrt((float)((x - w) * (x - w) + (y - h) * (y - h)))) % texHeight;
-    angle = (unsigned int)(0.5 * texWidth * atan2((float)(y - h), (float)(x - w)) / 3.1416);
+    angle = (int)(0.5 * texWidth * atan2((float)(y - h), (float)(x - w)) / 3.1416);
     distanceTable[x][y] = distance;
     angleTable[x][y] = angle;
   }

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>dos-like</title>
+	<style type="text/css">
+	:fullscreen{background:#000;margin:0!important}:full-screen{background:#000;margin:0!important}:-webkit-full-screen{background:#000;margin:0!important}:-moz-full-screen{background:#000;margin:0!important}
+	</style>
+</head>
+<body style="background:#1A1A1A;color:#888;font-family:sans-serif">
+<h1 id="wa_title" style="text-align:center;margin:0">dos-like</h1>
+<hr style="border:0;border-bottom:1px dashed #666;margin:7px 15px 15px 15px">
+<canvas id="wa_canvas" style="display:block;margin:0 auto;width:1088px;max-width:100%" oncontextmenu="event.preventDefault()" width="1088" height="768"></canvas>
+<hr style="border:0;border-bottom:1px dashed #666;margin:15px">
+<div style="text-align:center">
+	<span id="wa_control" style="display:none"><a href="javascript:" style="color:#28D" onclick="try{WA.SetFullscreen(true)}catch(e){}">Go Fullscreen</a> &middot;</span>
+	Made with <a href="https://mattiasgustavsson.itch.io/dos-like" target="_blank" style="color:#28D">dos-like</a> &middot;
+	Source on <a href="https://github.com/mattiasgustavsson/dos-like" target="_blank" style="color:#28D">GitHub</a> &middot;
+	Powered by <a href="https://github.com/schellingb/wajic" target="_blank" style="color:#28D">WAjic</a>
+</div>
+<script type='text/javascript'>
+var WA =
+{
+	canvas: document.getElementById('wa_canvas'),
+	print: (msg)=>console.log(msg),
+	error: function(code, msg)
+	{
+		var L = {
+			BOOT:  'Error during startup. Your browser might not support WebAssembly. Please update it to the latest version.',
+			WEBGL: 'Your browser or graphics card does not seem to support <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#EEE">WebGL</a>.<br>Find out how to get it <a href="http://get.webgl.org/" style="color:#EEE">here</a>.',
+			CRASH: 'dos-like crashed.',
+			MEM:   'dos-like ran out of memory.',
+			EXIT:  'Shutdown',
+		};
+		var w = WA.canvas.clientWidth, h = WA.canvas.clientHeight, p = (h/2-30), c = L[code] + (code != 'EXIT' ? '<br><br><sub>(' + msg + ')</sub>' : '');
+		WA.canvas.outerHTML = '<div style="text-align:center;background:#000;color:#888'+(h ? ';margin:0 auto;width:'+w+'px;height:'+(h-p)+'px;padding-top:'+p+'px':'')+'">'+c+'</div>';
+	},
+	started: function()
+	{
+		document.getElementById('wa_control').style.display = '';
+	},
+};
+{{{js}}}
+</script>
+</body>
+</html>

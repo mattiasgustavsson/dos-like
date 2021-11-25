@@ -72,3 +72,19 @@ SDL2 and GLEW are required - if you don't have them installed you can do so on U
   sudo apt-get install libsdl2-dev
   sudo apt-get install libglew-dev
 ```
+
+
+### WebAssembly
+
+To build all samples for WebAssembly, run wasm/build_all.bat.
+To build individual samples, do:
+```
+  node wajicup.js -stacksize 524288 ../source/dos.c ../source/burn.c out.html
+```
+where `burn.c` should be replaced with the sample you would like to build.
+
+You can embed asset files in the process with the -embed parameter. Refer to [wasm/build_all.bat](wasm/build_all.bat) for usage examples.
+
+You'll need a WebAssembly build environment which is available for Windows [as a packaged download here](../../releases/tag/bin).  
+It is a compact distribution of [node](https://nodejs.org/en/download/), [clang/wasm-ld](https://releases.llvm.org/download.html),
+[WAjic](https://github.com/schellingb/wajic) and [wasm system libraries](https://github.com/emscripten-core/emscripten/tree/main/system).

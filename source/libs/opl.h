@@ -2301,7 +2301,7 @@ opl_t* opl_create(void) {
   //x = inp(port) & 0xE0; /* read the status register (port 388h) and store the result */
   oplregwr(opl, 0x02, 0xff); /* write FFh to register 2 (Timer 1) */
   oplregwr(opl, 0x04, 0x21); /* start timer 1 by writing 21h to register 4 */
-  /*udelay(500); /* Creative Labs recommends a delay of at least 80 microseconds
+  /*udelay(500);*/ /* Creative Labs recommends a delay of at least 80 microseconds
                   I delay for 500us just to be sure. DO NOT perform inp()
                   calls for delay here, some cards do not initialize well then
                   (reported for CT2760) */
