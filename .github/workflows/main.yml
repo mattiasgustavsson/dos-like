@@ -222,7 +222,7 @@ jobs:
         with:
           repository: "mattiasgustavsson/dos-like"
           tag: "wasm-env"
-          fileName: "wasm.zip"
+          fileName: "dos-like-wasm-build-env-win.zip"
       - name: build burn
         run: |
           dir
