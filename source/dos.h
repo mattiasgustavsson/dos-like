@@ -244,6 +244,8 @@ int mousey( void );
 #pragma warning( pop )
 #endif
 
+bool app_has_focus( app_t* app );
+
 #include "libs/awe32rom.h"
 #include "libs/crtframe.h"
 
@@ -3362,6 +3364,9 @@ static int app_proc( app_t* app, void* user_data ) {
             }
         }
 
+        if( !app_has_focus( app ) ) {
+            continue;
+        }
         APP_U64 time = app_time_count( app );
         APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
         prev_time = time;
@@ -3518,6 +3523,10 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #pragma warning( pop)
 #endif
 
+
+bool app_has_focus( app_t* app ) {
+    return app->has_focus;
+}
 
 
 #include <inttypes.h>
