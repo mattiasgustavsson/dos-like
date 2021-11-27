@@ -318,7 +318,7 @@ int main( int argc, char* argv[] ) {
     int clipboard_size = 0;
     char* clipboard_chars = (char*) malloc( clipboard_capacity );
 
-    STB_TexteditState state;
+    static STB_TexteditState state;
     stb_textedit_initialize_state( &state, 0 );
     state.row_count_per_page = scrlines - 2;
     
