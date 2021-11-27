@@ -223,7 +223,7 @@ jobs:
           repository: "mattiasgustavsson/dos-like"
           tag: "wasm-env"
           fileName: "wasm.zip"
-    - name: build burn
+      - name: build burn
         run: |
           7z e wasm.zip
           wasm\node wasm\wajicup.js source/rotozoom.c source/dos.c rotozoom.html
