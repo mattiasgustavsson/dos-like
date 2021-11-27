@@ -214,3 +214,16 @@ jobs:
       - name: build voxel
         run: |
           gcc source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+  build-wasm:
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v1
+      - uses: robinraju/release-downloader@v1.2
+        with:
+          repository: "mattiasgustavsson/dos-like"
+          tag: "wasm-env"
+          fileName: "wasm.zip"
+    - name: build burn
+        run: |
+          7z e wasm.zip
+          wasm\node wasm\wajicup.js source/rotozoom.c source/dos.c rotozoom.html
