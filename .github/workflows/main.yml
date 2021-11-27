@@ -45,6 +45,9 @@ jobs:
       - name: build voxel
         run: |
           cl source/voxel.c source/dos.c
+      - name: build command
+        run: |
+          cl source/command.c source/dos.c
   build-windows-msvc-cpp:
     runs-on: windows-2019
     steps:
@@ -87,6 +90,9 @@ jobs:
       - name: build voxel
         run: |
           cl /Tp source/voxel.c /Tp source/dos.c
+      - name: build command
+        run: |
+          cl /Tp source/command.c /Tp source/dos.c
   build-windows-tcc:
     runs-on: windows-2019
     steps:
@@ -127,6 +133,9 @@ jobs:
       - name: build voxel
         run: |
           tcc/tcc source/voxel.c source/dos.c
+      - name: build command
+        run: |
+            tcc/tcc source/command.c source/dos.c
   build-macos:
     runs-on: macOS-latest
     steps:
