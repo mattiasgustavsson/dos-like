@@ -257,7 +257,7 @@ jobs:
             wasm\node wasm\wajicup.js -embed files/rotozoom.gif files/rotozoom.gif source/rotozoom.c source/dos.c rotozoom.html
       - name: build sound
         run: |          
-            wasm\node wasm\wajicup.js -embed files/doom.mus files/doom.mus -embed files/simon.mid files/simon.mid -embed files/cfodder.mod files/cfodder.mod -embed files/soundcard.wav files/soundcard.wav -embed files/doom.op2 files/doom.op2 -embed files/doom.opb files/doom.opb source/sound.c source/dos.c sound.html
+            wasm\node wasm\wajicup.js -embed files/sound/ files/sound/ source/sound.c source/dos.c sound.html
       - name: build stranded
         run: |          
             wasm\node wasm\wajicup.js -embed files/stranded/ files/stranded/ source/stranded.c source/dos.c stranded.html

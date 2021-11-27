@@ -7,12 +7,12 @@
 
 int main( int argc, char* argv[] ) {
 
-    struct music_t* mus = loadmus( "files/doom.mus" );
-    struct music_t* mid = loadmid( "files/simon.mid" );
-    struct music_t* mod = loadmod( "files/cfodder.mod" );
-    struct music_t* opb = loadopb( "files/doom.opb" );
-    struct sound_t* wav = loadwav( "files/soundcard.wav" );
-    int doom_soundbank = installusersoundbank( "files/doom.op2" );
+    struct music_t* mus = loadmus( "files/sound/doom.mus" );
+    struct music_t* mid = loadmid( "files/sound/simon.mid" );
+    struct music_t* mod = loadmod( "files/sound/cfodder.mod" );
+    struct music_t* opb = loadopb( "files/sound/doom.opb" );
+    struct sound_t* wav = loadwav( "files/sound/soundcard.wav" );
+    int doom_soundbank = installusersoundbank( "files/sound/doom.op2" );
     int use_awe32 = 1;
 
     cputs( "SOUND DEMO" );

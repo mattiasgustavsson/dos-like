@@ -5,7 +5,7 @@ wasm\node wasm\wajicup.js source/mandelbrot.c source/dos.c mandelbrot.html
 wasm\node wasm\wajicup.js source/plasma.c source/dos.c plasma.html
 wasm\node wasm\wajicup.js -embed files/raycast/ files/raycast/ source/raycast.c source/dos.c raycast.html
 wasm\node wasm\wajicup.js -embed files/rotozoom.gif files/rotozoom.gif source/rotozoom.c source/dos.c rotozoom.html
-wasm\node wasm\wajicup.js -embed files/doom.mus files/doom.mus -embed files/simon.mid files/simon.mid -embed files/cfodder.mod files/cfodder.mod -embed files/soundcard.wav files/soundcard.wav -embed files/doom.op2 files/doom.op2 -embed files/doom.opb files/doom.opb source/sound.c source/dos.c sound.html
+wasm\node wasm\wajicup.js -embed files/sound/ files/sound/ source/sound.c source/dos.c sound.html
 wasm\node wasm\wajicup.js -embed files/stranded/ files/stranded/ source/stranded.c source/dos.c stranded.html
 wasm\node wasm\wajicup.js source/tracker.c source/dos.c tracker.html
 wasm\node wasm\wajicup.js -embed files/tunnel.gif files/tunnel.gif source/tunnel.c source/dos.c tunnel.html
