@@ -1,4 +1,4 @@
 *.exe
 *.out
+*.html
 wasm
-*.js

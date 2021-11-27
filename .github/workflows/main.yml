@@ -230,7 +230,7 @@ jobs:
             wasm\node wasm\wajicup.js source/burn.c source/dos.c burn.html
       - name: build edit
         run: |          
-            wasm\node wasm\wajicup.js -args -embed source/edit.c source/edit.c source/edit.c source/dos.c edit.html
+            wasm\node wasm\wajicup.js -embed source/rotozoom.c source/rotozoom.c source/edit.c source/dos.c edit.html
       - name: build julia
         run: |          
             wasm\node wasm\wajicup.js source/julia.c source/dos.c julia.html

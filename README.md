@@ -76,15 +76,19 @@ SDL2 and GLEW are required - if you don't have them installed you can do so on U
 
 ### WebAssembly
 
-To build all samples for WebAssembly, run wasm/build_all.bat.
+To build all samples for WebAssembly, run build_all_wasm.bat.
 To build individual samples, do:
 ```
-  node wajicup.js -stacksize 524288 ../source/dos.c ../source/stranded.c out.html
+  wasm\node wasm\wajicup.js source/burn.c source/dos.c out.html
 ```
-where `stranded.c` should be replaced with the sample you would like to build.
+where `burn.c` should be replaced with the sample you would like to build.
 
-You can embed asset files in the process with the -embed parameter. Refer to [build_all_wasm.bat](build_all_wasm.bat) for usage examples.
+You can embed asset files in the process with the -embed parameter. 
+For examples of this, see the file [build_all_wasm.bat](build_all_wasm.bat)
 
-You'll need a WebAssembly build environment which is available for Windows [as a packaged download here](../../releases/tag/wasm-env).  
-It is a compact distribution of [node](https://nodejs.org/en/download/), [clang/wasm-ld](https://releases.llvm.org/download.html),
+A WebAssembly build environment is required. You can download it (for Windows) here: [releases/tag/wasm-env](../../releases/tag/wasm-env).
+Unzip it so that the `wasm` folder in the zip file is at your repository root. Note that if you downloaded dos-like from itch.io, the wasm
+build environment is already included.
+
+The wasm build environment is a compact distribution of [node](https://nodejs.org/en/download/), [clang/wasm-ld](https://releases.llvm.org/download.html),
 [WAjic](https://github.com/schellingb/wajic) and [wasm system libraries](https://github.com/emscripten-core/emscripten/tree/main/system).

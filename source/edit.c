@@ -267,7 +267,14 @@ void help( void ) {
 
 
 int main( int argc, char* argv[] ) {
+    
+    #ifdef __wasm__  
+        // This is a hack to make web assembly builds of the editor open a source file for demo purposes
+        argc = 2; argv[ 1 ] = "source/rotozoom.c";
+    #endif
+
     setvideomode( videomode_80x25_9x16 );
+   
     if( argc != 2 ) {
         goxy( 0, 0 ); putstring( "Usage:" );
         goxy( 4, 1 ); putstring( "edit filename.ext" );

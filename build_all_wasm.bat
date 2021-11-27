@@ -1,20 +1,12 @@
-@if not exist wasm (
-    echo Download the wasm tools - see README.md for details
-    pause
-    goto :eof
-)
-pushd wasm
-node wajicup.js -cc -std=c11 ../source/dos.c dos.o
-node wajicup.js -stacksize 524288 -ld dos.o ../source/burn.c ../burn.js
-node wajicup.js -stacksize 524288 -ld dos.o -args -embed edit.c ../source/edit.c ../source/edit.c ../edit.js
-node wajicup.js -stacksize 524288 -ld dos.o ../source/julia.c ../julia.js
-node wajicup.js -stacksize 524288 -ld dos.o ../source/mandelbrot.c ../mandelbrot.js
-node wajicup.js -stacksize 524288 -ld dos.o ../source/plasma.c ../plasma.js
-node wajicup.js -stacksize 524288 -ld dos.o -embed files/raycast/ ../files/raycast/ ../source/raycast.c ../raycast.js
-node wajicup.js -stacksize 524288 -ld dos.o -embed files/rotozoom.gif ../files/rotozoom.gif ../source/rotozoom.c ../rotozoom.js
-node wajicup.js -stacksize 524288 -ld dos.o -embed files/doom.mus ../files/doom.mus -embed files/simon.mid ../files/simon.mid -embed files/cfodder.mod ../files/cfodder.mod -embed files/soundcard.wav ../files/soundcard.wav -embed files/doom.op2 ../files/doom.op2 -embed files/doom.opb ../files/doom.opb ../source/sound.c ../sound.js
-node wajicup.js -stacksize 524288 -ld dos.o -embed files/stranded/ ../files/stranded/ ../source/stranded.c ../stranded.js
-node wajicup.js -stacksize 524288 -ld dos.o ../source/tracker.c ../tracker.js
-node wajicup.js -stacksize 524288 -ld dos.o -embed files/tunnel.gif ../files/tunnel.gif ../source/tunnel.c ../tunnel.js
-node wajicup.js -stacksize 524288 -ld dos.o -embed files/C1W.gif ../files/C1W.gif -embed files/D1.gif ../files/D1.gif ../source/voxel.c ../voxel.js
-popd wasm
+wasm\node wasm\wajicup.js source/burn.c source/dos.c burn.html
+wasm\node wasm\wajicup.js -embed source/rotozoom.c source/rotozoom.c source/edit.c source/dos.c edit.html
+wasm\node wasm\wajicup.js source/julia.c source/dos.c julia.html
+wasm\node wasm\wajicup.js source/mandelbrot.c source/dos.c mandelbrot.html
+wasm\node wasm\wajicup.js source/plasma.c source/dos.c plasma.html
+wasm\node wasm\wajicup.js -embed files/raycast/ files/raycast/ source/raycast.c source/dos.c raycast.html
+wasm\node wasm\wajicup.js -embed files/rotozoom.gif files/rotozoom.gif source/rotozoom.c source/dos.c rotozoom.html
+wasm\node wasm\wajicup.js -embed files/doom.mus files/doom.mus -embed files/simon.mid files/simon.mid -embed files/cfodder.mod files/cfodder.mod -embed files/soundcard.wav files/soundcard.wav -embed files/doom.op2 files/doom.op2 -embed files/doom.opb files/doom.opb source/sound.c source/dos.c sound.html
+wasm\node wasm\wajicup.js -embed files/stranded/ files/stranded/ source/stranded.c source/dos.c stranded.html
+wasm\node wasm\wajicup.js source/tracker.c source/dos.c tracker.html
+wasm\node wasm\wajicup.js -embed files/tunnel.gif files/tunnel.gif source/tunnel.c source/dos.c tunnel.html
+wasm\node wasm\wajicup.js -embed files/C1W.gif files/C1W.gif -embed files/D1.gif files/D1.gif source/voxel.c source/dos.c voxel.html
