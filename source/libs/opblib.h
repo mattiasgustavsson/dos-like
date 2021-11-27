@@ -309,7 +309,7 @@ typedef struct Command Command;
 typedef struct OpbData OpbData;
 typedef struct Instrument Instrument;
 
-typedef struct Context {
+struct Context {
     VectorT(Command) CommandStream;
     OPB_StreamWriter Write;
     OPB_StreamSeeker Seek;
@@ -323,7 +323,7 @@ typedef struct Context {
     double Time;
     void* UserData;
     void* ReceiverData;
-} Context;
+};
 
 static void Context_Free(Context* context) {
     Vector_Free(&context->CommandStream);
@@ -420,18 +420,18 @@ static size_t Uint7Size(uint32_t value) {
     }
 }
 
-typedef struct Command {
+struct Command {
     uint16_t Addr;
     uint8_t Data;
     double Time;
     int OrderIndex;
     int DataIndex;
-} Command;
+};
 
-typedef struct OpbData {
+struct OpbData {
     uint32_t Count;
     uint8_t Args[16];
-} OpbData;
+};
 
 static void OpbData_WriteUint7(OpbData* data, uint32_t value) {
     if (value >= 2097152) {
@@ -533,12 +533,12 @@ Operator MakeOperator(int16_t Characteristic, int16_t AttackDecay, int16_t Susta
     return op;
 }
 
-typedef struct Instrument {
+struct Instrument {
     int16_t FeedConn;
     Operator Modulator;
     Operator Carrier;
     int Index;
-} Instrument;
+};
 
 Instrument MakeInstrument(int16_t FeedConn, Operator Modulator, Operator Carrier, int Index) {
     Instrument instrument;
