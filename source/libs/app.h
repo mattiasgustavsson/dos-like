@@ -3653,7 +3653,6 @@ app_state_t app_yield( app_t* app )
             input_event.data.mouse_pos.y = e.motion.y;
             app_internal_add_input_event( app, &input_event );
 
-            app_input_event_t input_event;
             input_event.type = APP_INPUT_MOUSE_DELTA;
             input_event.data.mouse_pos.x = e.motion.xrel;
             input_event.data.mouse_pos.y = e.motion.yrel;
