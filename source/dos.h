@@ -186,6 +186,8 @@ enum keycode_t* readkeys( void );
 char const* readchars( void );
 int mousex( void );
 int mousey( void );
+int mouserelx( void );
+int mouserely( void );
 
 #endif /* dos_h */
 
@@ -432,6 +434,8 @@ struct internals_t {
         char charbuffer1[ 256 ];
         int mouse_x;
         int mouse_y;
+        int mouse_relx;
+        int mouse_rely;
     } input;
 
     struct {
@@ -1653,6 +1657,16 @@ int mousex( void ) {
 
 int mousey( void ) {
     return internals->input.mouse_y;
+}
+
+
+int mouserelx( void ) {
+    return internals->input.mouse_relx;
+}
+
+
+int mouserely( void ) {
+    return internals->input.mouse_rely;
 }
 
 
@@ -3089,6 +3103,8 @@ static int app_proc( app_t* app, void* user_data ) {
         memset( keys, 0, sizeof( keys ) );
         int chars_index = 0;
         memset( chars, 0, sizeof( chars ) );
+        int relx = 0;
+        int rely = 0;
         app_input_t input = app_input( app );
         for( int i = 0; i < input.count; ++i ) {
             app_input_event_t* event = &input.events[ i ];
@@ -3121,8 +3137,13 @@ static int app_proc( app_t* app, void* user_data ) {
                         chars[ chars_index++ ] = event->data.char_code;
                     }
                 }
+            } else if( event->type  == APP_INPUT_MOUSE_DELTA ) {
+                relx += event->data.mouse_delta.x;
+                rely += event->data.mouse_delta.y;
             }
         }
+        internals->input.mouse_relx = relx;
+        internals->input.mouse_rely = rely;
 
         // Check if the close button on the window was clicked (or Alt+F4 was pressed)
         if( app_state == APP_STATE_EXIT_REQUESTED ) {

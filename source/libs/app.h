@@ -1861,22 +1861,11 @@ static LRESULT CALLBACK app_internal_wndproc( HWND hwnd, UINT message, WPARAM wp
                 app->GetRawInputDataPtr( (HRAWINPUT) lparam, RID_INPUT, &raw, &size, sizeof( RAWINPUTHEADER ) );
                 if( raw.header.dwType == RIM_TYPEMOUSE )
                     {
-                    float dx = (float) raw.data.mouse.lLastX;
-                    float dy = (float) raw.data.mouse.lLastY;
-
-                    float const microsoft_mouse_dpi_constant = 400.0f; // Apparently, most mice are meant to run at 400 DPI. This might be wrong.
-                    dx /= microsoft_mouse_dpi_constant;
-                    dy /= microsoft_mouse_dpi_constant;
-
-                    if( app->input_count > 0 && app->input_events[ app->input_count - 1 ].type == APP_INPUT_MOUSE_DELTA )
+                    if( ( raw.data.mouse.usFlags & 1 ) == MOUSE_MOVE_RELATIVE) 
                         {
-                        app_input_event_t* event = &app->input_events[ app->input_count - 1 ];
-                        event->data.mouse_delta.x += dx;
-                        event->data.mouse_delta.y += dy;
-                     }
-                    else
-                        {
-                     input_event.type = APP_INPUT_MOUSE_DELTA;
+                        float dx = (float) raw.data.mouse.lLastX;
+                        float dy = (float) raw.data.mouse.lLastY;
+                        input_event.type = APP_INPUT_MOUSE_DELTA;
                         input_event.data.mouse_delta.x = dx;
                         input_event.data.mouse_delta.y = dy;
                         app_internal_add_input_event( app, &input_event );
@@ -3662,6 +3651,12 @@ app_state_t app_yield( app_t* app )
             input_event.type = APP_INPUT_MOUSE_MOVE;
             input_event.data.mouse_pos.x = e.motion.x;
             input_event.data.mouse_pos.y = e.motion.y;
+            app_internal_add_input_event( app, &input_event );
+
+            app_input_event_t input_event;
+            input_event.type = APP_INPUT_MOUSE_DELTA;
+            input_event.data.mouse_pos.x = e.motion.xrel;
+            input_event.data.mouse_pos.y = e.motion.yrel;
             app_internal_add_input_event( app, &input_event );
             }
         else if( e.type == SDL_MOUSEBUTTONDOWN )
