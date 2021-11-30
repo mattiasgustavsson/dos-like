@@ -110,9 +110,11 @@ struct music_t* loadmid( char const* filename );
 struct music_t* loadmus( char const* filename );
 struct music_t* loadmod( char const* filename );
 struct music_t* loadopb( char const* filename );
+struct music_t* createmus( void* data, int size );
 void playmusic( struct music_t* music, int loop, int volume );
 void stopmusic( void );
 int musicplaying( void );
+void musicvolume( int volume );
 
 enum soundmode_t {
     soundmode_8bit_mono_5000,
@@ -154,6 +156,7 @@ struct sound_t* createsound( int channels, int samplerate, int framecount, short
 void playsound( int channel, struct sound_t* sound, int loop, int volume );
 void stopsound( int channel );
 int soundplaying( int channel );
+void soundvolume( int channel, int left, int right );
 
 
 enum keycode_t { 
@@ -443,7 +446,8 @@ struct internals_t {
         struct {
             struct sound_t* sound;
             bool loop;
-            int volume;
+            int volume_left;
+            int volume_right;
             int play_counter;
         } channels[ SOUND_CHANNELS ];
         
@@ -1846,6 +1850,17 @@ struct music_t* loadmus( char const* filename ) {
 }
 
 
+struct music_t* createmus( void* data, int size ) {
+    load_default_sf2();
+    mus_t* mus = mus_create( data, size, NULL );
+    if( !mus ) return NULL;
+    struct music_t* music = ( (struct music_t*)mus ) - 1;
+    music->format = MUSIC_FORMAT_MUS;
+    return music;
+}
+
+
+
 struct music_t* loadmod( char const* filename ) {
    
     FILE* fp = fopen( filename, "rb" );
@@ -1947,6 +1962,15 @@ int musicplaying( void ) {
 }
 
 
+void musicvolume( int volume ) {
+    if( volume < 0 ) volume = 0;
+    if( volume > 255 ) volume = 255;
+    thread_mutex_lock( &internals->mutex );
+    internals->audio.music_volume = volume;
+    thread_mutex_unlock( &internals->mutex );
+}
+
+
 void setsoundmode( enum soundmode_t mode ) {
     thread_mutex_lock( &internals->mutex );
     internals->audio.soundmode = mode;
@@ -2019,7 +2043,8 @@ void playsound( int channel, struct sound_t* sound, int loop, int volume ) {
     thread_mutex_lock( &internals->mutex );
     internals->audio.channels[ channel ].sound = sound;
     internals->audio.channels[ channel ].loop = loop;
-    internals->audio.channels[ channel ].volume = volume;
+    internals->audio.channels[ channel ].volume_left = volume;
+    internals->audio.channels[ channel ].volume_right = volume;
     internals->audio.channels[ channel ].play_counter++;
     thread_mutex_unlock( &internals->mutex );
 }
@@ -2036,6 +2061,19 @@ void stopsound( int channel ) {
 int soundplaying( int channel ) {
     if( channel < 0 || channel >= SOUND_CHANNELS ) return 0;
     return internals->audio.channels[ channel ].sound != NULL;
+}
+
+
+void soundvolume( int channel, int left, int right ) {
+    if( channel < 0 || channel >= SOUND_CHANNELS ) return;
+    if( left < 0 ) left = 0;
+    if( left > 255 ) left = 255;
+    if( right < 0 ) right = 0;
+    if( right > 255 ) right = 255;
+    thread_mutex_lock( &internals->mutex );
+    internals->audio.channels[ channel ].volume_left = left;
+    internals->audio.channels[ channel ].volume_right = right;
+    thread_mutex_unlock( &internals->mutex );
 }
 
 
@@ -2547,7 +2585,7 @@ int render_mus_opl( mus_t* mus, int left_over, int loop, APP_S16* sample_pairs, 
 }
 
 
-float mix_sound_channel( struct sound_t* sound, bool loop, float volume, float position, float* sample_pairs, int sample_pairs_count ) {
+float mix_sound_channel( struct sound_t* sound, bool loop, float volume_left, float volume_right, float position, float* sample_pairs, int sample_pairs_count ) {
     float ratio = sound->samplerate / 44100.0f;
     int16_t* samples = (int16_t*)( sound + 1 );
     if( sound->channels == 2 ) {
@@ -2559,8 +2597,8 @@ float mix_sound_channel( struct sound_t* sound, bool loop, float volume, float p
             }
             float s0 = p < sound->framecount ? samples[ p * 2 + 0 ] / 32768.0f : 0.0f;
             float s1 = p < sound->framecount ? samples[ p * 2 + 1 ] / 32768.0f : 0.0f;
-            sample_pairs[ i * 2 + 0 ] += s0 * volume;
-            sample_pairs[ i * 2 + 1 ] += s1 * volume;            
+            sample_pairs[ i * 2 + 0 ] += s0 * volume_left;
+            sample_pairs[ i * 2 + 1 ] += s1 * volume_right;            
             position += ratio;
         }
     } else {
@@ -2571,8 +2609,8 @@ float mix_sound_channel( struct sound_t* sound, bool loop, float volume, float p
                 p = 0;
             }
             float s = p < sound->framecount ? samples[ p + 0 ] / 32768.0f : 0.0f;
-            sample_pairs[ i * 2 + 0 ] += s * volume;
-            sample_pairs[ i * 2 + 1 ] += s * volume;            
+            sample_pairs[ i * 2 + 0 ] += s * volume_left;
+            sample_pairs[ i * 2 + 1 ] += s * volume_right;            
             position += ratio;
         }
     }
@@ -2607,7 +2645,8 @@ struct sound_context_t {
     struct {
         struct sound_t* sound;
         bool loop;
-        int volume;
+        int volume_left;
+        int volume_right;
         int play_counter;
         float position;
         bool done;
@@ -2636,7 +2675,8 @@ static void app_sound_callback( APP_S16* sample_pairs, int sample_pairs_count, v
     for( int i = 0; i < SOUND_CHANNELS; ++i ) {
         if( context->sound_channels[ i ].sound && !context->sound_channels[ i ].done ) {
             float result = mix_sound_channel( context->sound_channels[ i ].sound, context->sound_channels[ i ].loop, 
-                context->sound_channels[ i ].volume / 255.0f, context->sound_channels[ i ].position,
+                context->sound_channels[ i ].volume_left / 255.0f, context->sound_channels[ i ].volume_right / 255.0f, 
+                context->sound_channels[ i ].position,
                 mixbuffer, sample_pairs_count );
             if( result >= context->sound_channels[ i ].sound->framecount ) {
                 context->sound_channels[ i ].done = true;
@@ -3021,7 +3061,8 @@ static int app_proc( app_t* app, void* user_data ) {
     struct {
         struct sound_t* sound;
         bool loop;
-        int volume;
+        int volume_left;
+        int volume_right;
         int play_counter;
     } sound_channels[ SOUND_CHANNELS ] = { { NULL } };
     
@@ -3187,7 +3228,8 @@ static int app_proc( app_t* app, void* user_data ) {
         for( int i = 0; i < SOUND_CHANNELS; ++i ) {
             sound_channels[ i ].sound = internals->audio.channels[ i ].sound;
             sound_channels[ i ].loop = internals->audio.channels[ i ].loop;
-            sound_channels[ i ].volume = internals->audio.channels[ i ].volume;
+            sound_channels[ i ].volume_left = internals->audio.channels[ i ].volume_left;
+            sound_channels[ i ].volume_right = internals->audio.channels[ i ].volume_right;
             sound_channels[ i ].play_counter = internals->audio.channels[ i ].play_counter;
         }
 
@@ -3231,6 +3273,10 @@ static int app_proc( app_t* app, void* user_data ) {
             sound_context.commands[ sound_context.commands_count++ ] = audio_commands[ i ];
         }
 
+        sound_context.music_volume = music_volume;
+        if( sound_context.soundfont ) {
+            tsf_set_volume( sound_context.soundfont, music_volume / 255.0f );
+        }
         if( current_music && sound_context.music_play_counter != music_play_counter ) {
             if( sound_context.soundfont ) {
                 tsf_reset( sound_context.soundfont );
@@ -3295,13 +3341,14 @@ static int app_proc( app_t* app, void* user_data ) {
             || sound_channels[ i ].play_counter != sound_context.sound_channels[ i ].play_counter ) {
                 sound_context.sound_channels[ i ].sound = sound_channels[ i ].sound;
                 sound_context.sound_channels[ i ].loop = sound_channels[ i ].loop;
-                sound_context.sound_channels[ i ].volume = sound_channels[ i ].volume;
                 sound_context.sound_channels[ i ].play_counter = sound_channels[ i ].play_counter;
                 sound_context.sound_channels[ i ].position = 0.0f;
                 sound_context.sound_channels[ i ].done = false;
             } else if( sound_context.sound_channels[ i ].done ) {
                 internals->audio.channels[ i ].sound = NULL;
             }
+            sound_context.sound_channels[ i ].volume_left = sound_channels[ i ].volume_left;
+            sound_context.sound_channels[ i ].volume_right = sound_channels[ i ].volume_right;
         }
         thread_mutex_unlock( &sound_context.mutex );
 
