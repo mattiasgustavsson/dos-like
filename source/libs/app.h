@@ -3645,6 +3645,17 @@ app_state_t app_yield( app_t* app )
             input_event.data.key = app_internal_scancode_to_appkey( app, e.key.keysym.scancode );
             app_internal_add_input_event( app, &input_event );
             }
+        else if( e.type == SDL_TEXTINPUT )
+            {
+            app_input_event_t input_event;
+            char *c;
+            input_event.type = APP_INPUT_CHAR;
+            for ( c = e.text.text; *c; c++ )
+                {
+                input_event.data.char_code = *c;
+                app_internal_add_input_event( app, &input_event );
+                }
+            }
         else if( e.type == SDL_MOUSEMOTION )
             {
             app_input_event_t input_event;
