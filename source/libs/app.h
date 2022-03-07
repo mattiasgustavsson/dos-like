@@ -3384,7 +3384,9 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
     app->screenmode = APP_SCREENMODE_FULLSCREEN;
 
     int result = 0xff;
-
+    int display_count;
+    int glres;
+          
     if( SDL_Init( SDL_INIT_EVERYTHING ) < 0 )
         {
 //        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
@@ -3405,7 +3407,7 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
     app->has_focus = 1;
     app->volume = 256;
 
-    int display_count = SDL_GetNumVideoDisplays();
+    display_count = SDL_GetNumVideoDisplays();
     for( int i = 0; i < display_count; ++i )
         {
         SDL_Rect r;
@@ -3461,7 +3463,7 @@ int app_run( int (*app_proc)( app_t*, void* ), void* user_data, void* memctx, vo
         app->gl.GetShaderInfoLog = glGetShaderInfoLog;
     #endif
 
-    int glres = app_internal_opengl_init( app, &app->gl, app->interpolation, 640, 400 );
+    glres = app_internal_opengl_init( app, &app->gl, app->interpolation, 640, 400 );
     if( !glres )
         {
         app_fatal_error( app, "OpenGL init fail" );
