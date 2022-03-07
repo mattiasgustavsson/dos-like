@@ -178,6 +178,48 @@ jobs:
       - name: build voxel
         run: |
           clang source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+  build-macos-cpp:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: install dependencies
+        run: brew install sdl2 glew
+      - name: build burn
+        run: |
+          clang++ source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build edit
+        run: |
+          clang++ source/edit.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build julia
+        run: |
+          clang++ source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build mandelbrot
+        run: |
+          clang++ source/mandelbrot.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build plasma
+        run: |
+          clang++ source/plasma.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build raycast
+        run: |
+          clang++ source/raycast.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build rotozoom
+        run: |
+          clang++ source/rotozoom.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build sound
+        run: |
+          clang++ source/sound.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build stranded
+        run: |
+          clang++ source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build tracker
+        run: |
+          clang++ source/tracker.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build tunnel
+        run: |
+          clang++ source/tunnel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+      - name: build voxel
+        run: |
+          clang++ source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
   build-linux-gcc:
     runs-on: ubuntu-18.04
     steps:
