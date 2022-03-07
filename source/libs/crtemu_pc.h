@@ -362,6 +362,258 @@ static CRTEMU_PC_GLuint crtemu_pc_internal_build_shader( crtemu_pc_t* crtemu_pc,
 
 crtemu_pc_t* crtemu_pc_create( void* memctx )
     {
+
+    char const* vs_source = 
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
+        ""
+        "attribute vec4 pos;"
+        "varying vec2 uv;"
+        ""
+        "void main( void )"
+        "    {"
+        "    gl_Position = vec4( pos.xy, 0.0, 1.0 );"
+        "    uv = pos.zw;"
+        "    }";
+
+    char const* crt_fs_source = 
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
+        "\n"
+        "varying vec2 uv;\n"
+        "\n"
+        "uniform vec3 modulate;\n"
+        "uniform vec2 resolution;\n"
+        "uniform vec2 size;\n"
+        "uniform float time;\n"
+		"uniform sampler2D backbuffer;\n"
+        "uniform sampler2D blurbuffer;\n"
+        "uniform sampler2D frametexture;\n"
+        "uniform float use_frame;\n"
+        "\n"
+        #ifdef CRTEMU_PC_WEBGL
+            // WebGL does not support GL_CLAMP_TO_BORDER so we overwrite texture2D
+            // with this function which emulates the clamp-to-border behavior
+            "vec4 texture2Dborder(sampler2D samp, vec2 tc)\n"
+            "    {\n"
+            "    float borderdist = .502-max(abs(.5-tc.x), abs(.5-tc.y));\n"
+            "    float borderfade = clamp(borderdist * 400.0, 0.0, 1.0);\n"
+            "    return texture2D( samp, tc ) * borderfade;\n"
+            "    }\n"
+            "#define texture2D texture2Dborder\n"
+        #endif
+        "vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )\n"
+	    "    {\n"
+	    "    tc = tc * vec2(1.035, 0.96) + vec2( mix( -0.018,-0.0125*0.75,use_frame), 0.02);\n"
+		"	tc = tc * 1.2 - 0.1;\n"
+	    "    vec3 s = pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) );\n"
+	    "    return s*vec3(1.25);\n"
+	    "    }\n"
+        "\n"
+        "vec3 filmic( vec3 LinearColor )\n"
+	    "    {\n"
+	    "    vec3 x = max( vec3(0.0), LinearColor-vec3(0.004));\n"
+	    "    return (x*(6.2*x+0.5))/(x*(6.2*x+1.7)+0.06);\n"
+	    "    }\n"
+        "\n"
+        "vec2 curve( vec2 uv )\n"
+	    "    {\n"
+	    "    uv = (uv - 0.5) * 2.0;\n"
+	    "    uv *= 1.1;	\n"
+	    "    uv.x *= 1.0 + pow((abs(uv.y) / 5.0), 2.0);\n"
+	    "    uv.y *= 1.0 + pow((abs(uv.x) / 4.0), 2.0);\n"
+	    "    uv  = (uv / 2.0) + 0.5;\n"
+	    "    uv =  uv *0.92 + 0.04;\n"
+	    "    return uv;\n"
+	    "    }\n"
+        "\n"
+        "float rand(vec2 co)\n"
+	    "    {\n"
+        "    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);\n"
+	    "    }\n"
+	    "    \n"
+        "void main(void)\n"
+		"	{\n"
+	    "    /* Curve */\n"
+	    "    vec2 curved_uv = mix( curve( uv ), uv, 0.8 );\n"
+	    "    float scale = 0.04;\n"
+	    "    vec2 scuv = curved_uv*(1.0-scale)+scale/2.0+vec2(0.003, -0.001);\n"
+        "\n"
+	    "    /* Main color, Bleed */\n"
+	    "    vec3 col;\n"
+	    "    float x =  sin(0.1*time+curved_uv.y*13.0)*sin(0.23*time+curved_uv.y*19.0)*sin(0.3+0.11*time+curved_uv.y*23.0)*0.0012;\n"
+	    "    float o =sin(gl_FragCoord.y*1.5)/resolution.x;\n"
+	    "    x+=o*0.25;\n"
+		"	x *= 0.2;\n"
+	    "    col.r = tsample(backbuffer,vec2(x+scuv.x+0.0009*0.25,scuv.y+0.0009*0.25),resolution.y/800.0, resolution ).x+0.02;\n"
+	    "    col.g = tsample(backbuffer,vec2(x+scuv.x+0.0000*0.25,scuv.y-0.0011*0.25),resolution.y/800.0, resolution ).y+0.02;\n"
+	    "    col.b = tsample(backbuffer,vec2(x+scuv.x-0.0015*0.25,scuv.y+0.0000*0.25),resolution.y/800.0, resolution ).z+0.02;\n"
+	    "    float i = clamp(col.r*0.299 + col.g*0.587 + col.b*0.114, 0.0, 1.0 );		\n"
+	    "    i = pow( 1.0 - pow(i,2.0), 1.0 );\n"
+	    "    i = (1.0-i) * 0.85 + 0.15;	\n"
+        "\n"
+	    "    /* Ghosting */\n"
+        "    float ghs = 0.05;\n"
+	    "    vec3 r = tsample(blurbuffer, vec2(x-0.014*1.0, -0.027)*0.45+0.007*vec2( 0.35*sin(1.0/7.0 + 15.0*curved_uv.y + 0.9*time), \n"
+        "        0.35*sin( 2.0/7.0 + 10.0*curved_uv.y + 1.37*time) )+vec2(scuv.x+0.001,scuv.y+0.001),\n"
+        "        5.5+1.3*sin( 3.0/9.0 + 31.0*curved_uv.x + 1.70*time),resolution).xyz*vec3(0.5,0.25,0.25);\n"
+	    "    vec3 g = tsample(blurbuffer, vec2(x-0.019*1.0, -0.020)*0.45+0.007*vec2( 0.35*cos(1.0/9.0 + 15.0*curved_uv.y + 0.5*time), \n"
+        "        0.35*sin( 2.0/9.0 + 10.0*curved_uv.y + 1.50*time) )+vec2(scuv.x+0.000,scuv.y-0.002),\n"
+        "        5.4+1.3*sin( 3.0/3.0 + 71.0*curved_uv.x + 1.90*time),resolution).xyz*vec3(0.25,0.5,0.25);\n"
+	    "    vec3 b = tsample(blurbuffer, vec2(x-0.017*1.0, -0.003)*0.35+0.007*vec2( 0.35*sin(2.0/3.0 + 15.0*curved_uv.y + 0.7*time), \n"
+        "        0.35*cos( 2.0/3.0 + 10.0*curved_uv.y + 1.63*time) )+vec2(scuv.x-0.002,scuv.y+0.000),\n"
+        "        5.3+1.3*sin( 3.0/7.0 + 91.0*curved_uv.x + 1.65*time),resolution).xyz*vec3(0.25,0.25,0.5);\n"
+	    "\n"
+	    "    col += vec3(ghs*(1.0-0.299))*pow(clamp(vec3(3.0)*r,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
+        "    col += vec3(ghs*(1.0-0.587))*pow(clamp(vec3(3.0)*g,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
+        "    col += vec3(ghs*(1.0-0.114))*pow(clamp(vec3(3.0)*b,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
+	    "\n"
+	    "    /* Level adjustment (curves) */\n"
+	    "    col *= vec3(1.0,1.1,1.0);\n"
+        "    col = clamp(col*1.3 + 0.75*col*col + 1.25*col*col*col*col*col,vec3(0.0),vec3(10.0));\n"
+	    "\n"
+	    "    /* Vignette */\n"
+        "    float vig = (0.1 + 1.0*16.0*curved_uv.x*curved_uv.y*(1.0-curved_uv.x)*(1.0-curved_uv.y));\n"
+	    "    vig = 1.3*pow(vig,0.5);\n"
+	    "    col *= vig;\n"
+	    "\n"
+	    "    /* Scanlines */\n"
+	    "    float scans = clamp( 0.5+0.2*sin(cos(20.0*time)*0.32+curved_uv.y*size.y*1.75), 0.0, 1.0);\n"
+	    "    float s = pow(scans,0.9);\n"
+	    "    col = col * vec3(s);\n"
+        "\n"
+	    "    /* Vertical lines (shadow mask) */\n"
+	    "    col*=1.0-0.23*(clamp((mod(gl_FragCoord.xy.x, 3.0))/2.0,0.0,1.0));\n"
+        "\n"
+	    "    /* Tone map */\n"
+	    "    col = filmic( col );\n"
+        "\n"
+	    "    /* Noise */\n"
+	    "    //vec2 seed = floor(curved_uv*resolution.xy*vec2(0.5))/resolution.xy;\n"
+        "    vec2 seed = curved_uv*resolution.xy;;\n"
+	    "    /* seed = curved_uv; */\n"
+	    "    col -= 0.015*pow(vec3(rand( seed +time ), rand( seed +time*2.0 ), rand( seed +time * 3.0 ) ), vec3(1.5) );\n"
+	    "\n"
+	    "    /* Flicker */\n"
+        "    col *= (1.0-0.004*(sin(50.0*time+curved_uv.y*2.0)*0.5+0.5));\n"
+        "\n"
+	    "    /* Clamp */\n"
+	    "    if (curved_uv.x < 0.0 || curved_uv.x > 1.0)\n"
+		"        col *= 0.0;\n"
+	    "    if (curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
+		"        col *= 0.0;\n"
+		"    col*=modulate; \n"
+	    "    /* Frame */\n"
+	    "    vec2 fscale = vec2( -0.019, -0.018 );\n"
+		"	vec2 fuv=vec2( uv.x, 1.0 - uv.y)*((1.0)+2.0*fscale)-fscale-vec2(-0.0, 0.005);\n"
+	    "    vec4 f=texture2D(frametexture, fuv * vec2(0.925, 0.81) + vec2( 0.042, 0.09 ));\n"
+	    "    f.xyz = mix( f.xyz, vec3(0.5,0.5,0.5), 0.5 );\n"
+	    "    float fvig = clamp( -0.00+512.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y), 0.2, 0.85 );\n"
+		"	col *= fvig;\n"
+        "    float expon = 1.4;\n"
+        "//    f.xyz = vec3(26.0/255.0,26.0/255.0,26.0/255.0);expon=1.0;\n"
+	    "    col = mix( col, mix( max( col, 0.0), pow( abs( f.xyz ), vec3( expon ) ), f.w), vec3( use_frame) );\n"
+        "    \n"
+		"	gl_FragColor = vec4( col, 1.0 );\n"
+		"	}\n"
+		"	\n"
+        "";
+
+    char const* blur_fs_source = 
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
+		""
+        "varying vec2 uv;"
+		""
+        "uniform vec2 blur;"
+        "uniform sampler2D texture;"
+		""
+        "void main( void )"
+        "    {"
+        "    vec4 sum = texture2D( texture, uv ) * 0.2270270270;"
+        "    sum += texture2D(texture, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
+        "    sum += texture2D(texture, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
+        "    sum += texture2D(texture, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
+        "    sum += texture2D(texture, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
+        "    sum += texture2D(texture, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
+        "    sum += texture2D(texture, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
+        "    sum += texture2D(texture, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
+        "    sum += texture2D(texture, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
+        "    gl_FragColor = sum;"
+        "    }   "
+		"";
+
+
+    char const* accumulate_fs_source = 
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
+		""
+        "varying vec2 uv;"
+		""
+        "uniform sampler2D tex0;"
+        "uniform sampler2D tex1;"
+        "uniform float modulate;"
+		""
+        "void main( void )"
+        "    {"
+        "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
+        "    vec4 b = texture2D( tex1, uv );"
+		""
+        "    gl_FragColor = max( a, b * 0.96 );"
+        "    }   "
+		"";
+
+    char const* blend_fs_source = 
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
+		""
+        "varying vec2 uv;"
+		""
+        "uniform sampler2D tex0;"
+        "uniform sampler2D tex1;"
+        "uniform float modulate;"
+		""
+        "void main( void )"
+        "    {"
+        "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
+        "    vec4 b = texture2D( tex1, uv );"
+		""
+        "    gl_FragColor = max( a, b * 0.24 );"
+        "    }   "
+		"";
+
+    char const* copy_fs_source = 
+        #ifdef CRTEMU_PC_WEBGL
+            "precision highp float;\n\n"
+        #else
+            "#version 120\n\n"
+        #endif
+		""
+        "varying vec2 uv;"
+		""
+        "uniform sampler2D tex0;"
+		""
+        "void main( void )"
+        "    {"
+        "    gl_FragColor = texture2D( tex0, uv );"
+        "    }   "
+		"";
+	
     crtemu_pc_t* crtemu_pc = (crtemu_pc_t*) CRTEMU_PC_MALLOC( memctx, sizeof( crtemu_pc_t ) );
     memset( crtemu_pc, 0, sizeof( crtemu_pc_t ) );
     crtemu_pc->memctx = memctx;
@@ -582,271 +834,20 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
         if( !crtemu_pc->GetShaderInfoLog ) goto failed;
     #endif
 
-    char const* vs_source = 
-        #ifdef CRTEMU_PC_WEBGL
-            "precision highp float;\n\n"
-        #else
-            "#version 120\n\n"
-        #endif
-        ""
-        "attribute vec4 pos;"
-        "varying vec2 uv;"
-        ""
-        "void main( void )"
-        "    {"
-        "    gl_Position = vec4( pos.xy, 0.0, 1.0 );"
-        "    uv = pos.zw;"
-        "    }";
-
-    char const* crt_fs_source = 
-        #ifdef CRTEMU_PC_WEBGL
-            "precision highp float;\n\n"
-        #else
-            "#version 120\n\n"
-        #endif
-        "\n"
-        "varying vec2 uv;\n"
-        "\n"
-        "uniform vec3 modulate;\n"
-        "uniform vec2 resolution;\n"
-        "uniform vec2 size;\n"
-        "uniform float time;\n"
-		"uniform sampler2D backbuffer;\n"
-        "uniform sampler2D blurbuffer;\n"
-        "uniform sampler2D frametexture;\n"
-        "uniform float use_frame;\n"
-        "\n"
-        #ifdef CRTEMU_PC_WEBGL
-            // WebGL does not support GL_CLAMP_TO_BORDER so we overwrite texture2D
-            // with this function which emulates the clamp-to-border behavior
-            "vec4 texture2Dborder(sampler2D samp, vec2 tc)\n"
-            "    {\n"
-            "    float borderdist = .502-max(abs(.5-tc.x), abs(.5-tc.y));\n"
-            "    float borderfade = clamp(borderdist * 400.0, 0.0, 1.0);\n"
-            "    return texture2D( samp, tc ) * borderfade;\n"
-            "    }\n"
-            "#define texture2D texture2Dborder\n"
-        #endif
-        "vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )\n"
-	    "    {\n"
-	    "    tc = tc * vec2(1.035, 0.96) + vec2( mix( -0.018,-0.0125*0.75,use_frame), 0.02);\n"
-		"	tc = tc * 1.2 - 0.1;\n"
-	    "    vec3 s = pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) );\n"
-	    "    return s*vec3(1.25);\n"
-	    "    }\n"
-        "\n"
-        "vec3 filmic( vec3 LinearColor )\n"
-	    "    {\n"
-	    "    vec3 x = max( vec3(0.0), LinearColor-vec3(0.004));\n"
-	    "    return (x*(6.2*x+0.5))/(x*(6.2*x+1.7)+0.06);\n"
-	    "    }\n"
-        "\n"
-        "vec2 curve( vec2 uv )\n"
-	    "    {\n"
-	    "    uv = (uv - 0.5) * 2.0;\n"
-	    "    uv *= 1.1;	\n"
-	    "    uv.x *= 1.0 + pow((abs(uv.y) / 5.0), 2.0);\n"
-	    "    uv.y *= 1.0 + pow((abs(uv.x) / 4.0), 2.0);\n"
-	    "    uv  = (uv / 2.0) + 0.5;\n"
-	    "    uv =  uv *0.92 + 0.04;\n"
-	    "    return uv;\n"
-	    "    }\n"
-        "\n"
-        "float rand(vec2 co)\n"
-	    "    {\n"
-        "    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);\n"
-	    "    }\n"
-	    "    \n"
-        "void main(void)\n"
-		"	{\n"
-	    "    /* Curve */\n"
-	    "    vec2 curved_uv = mix( curve( uv ), uv, 0.8 );\n"
-	    "    float scale = 0.04;\n"
-	    "    vec2 scuv = curved_uv*(1.0-scale)+scale/2.0+vec2(0.003, -0.001);\n"
-        "\n"
-	    "    /* Main color, Bleed */\n"
-	    "    vec3 col;\n"
-	    "    float x =  sin(0.1*time+curved_uv.y*13.0)*sin(0.23*time+curved_uv.y*19.0)*sin(0.3+0.11*time+curved_uv.y*23.0)*0.0012;\n"
-	    "    float o =sin(gl_FragCoord.y*1.5)/resolution.x;\n"
-	    "    x+=o*0.25;\n"
-		"	x *= 0.2;\n"
-	    "    col.r = tsample(backbuffer,vec2(x+scuv.x+0.0009*0.25,scuv.y+0.0009*0.25),resolution.y/800.0, resolution ).x+0.02;\n"
-	    "    col.g = tsample(backbuffer,vec2(x+scuv.x+0.0000*0.25,scuv.y-0.0011*0.25),resolution.y/800.0, resolution ).y+0.02;\n"
-	    "    col.b = tsample(backbuffer,vec2(x+scuv.x-0.0015*0.25,scuv.y+0.0000*0.25),resolution.y/800.0, resolution ).z+0.02;\n"
-	    "    float i = clamp(col.r*0.299 + col.g*0.587 + col.b*0.114, 0.0, 1.0 );		\n"
-	    "    i = pow( 1.0 - pow(i,2.0), 1.0 );\n"
-	    "    i = (1.0-i) * 0.85 + 0.15;	\n"
-        "\n"
-	    "    /* Ghosting */\n"
-        "    float ghs = 0.05;\n"
-	    "    vec3 r = tsample(blurbuffer, vec2(x-0.014*1.0, -0.027)*0.45+0.007*vec2( 0.35*sin(1.0/7.0 + 15.0*curved_uv.y + 0.9*time), \n"
-        "        0.35*sin( 2.0/7.0 + 10.0*curved_uv.y + 1.37*time) )+vec2(scuv.x+0.001,scuv.y+0.001),\n"
-        "        5.5+1.3*sin( 3.0/9.0 + 31.0*curved_uv.x + 1.70*time),resolution).xyz*vec3(0.5,0.25,0.25);\n"
-	    "    vec3 g = tsample(blurbuffer, vec2(x-0.019*1.0, -0.020)*0.45+0.007*vec2( 0.35*cos(1.0/9.0 + 15.0*curved_uv.y + 0.5*time), \n"
-        "        0.35*sin( 2.0/9.0 + 10.0*curved_uv.y + 1.50*time) )+vec2(scuv.x+0.000,scuv.y-0.002),\n"
-        "        5.4+1.3*sin( 3.0/3.0 + 71.0*curved_uv.x + 1.90*time),resolution).xyz*vec3(0.25,0.5,0.25);\n"
-	    "    vec3 b = tsample(blurbuffer, vec2(x-0.017*1.0, -0.003)*0.35+0.007*vec2( 0.35*sin(2.0/3.0 + 15.0*curved_uv.y + 0.7*time), \n"
-        "        0.35*cos( 2.0/3.0 + 10.0*curved_uv.y + 1.63*time) )+vec2(scuv.x-0.002,scuv.y+0.000),\n"
-        "        5.3+1.3*sin( 3.0/7.0 + 91.0*curved_uv.x + 1.65*time),resolution).xyz*vec3(0.25,0.25,0.5);\n"
-	    "\n"
-	    "    col += vec3(ghs*(1.0-0.299))*pow(clamp(vec3(3.0)*r,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
-        "    col += vec3(ghs*(1.0-0.587))*pow(clamp(vec3(3.0)*g,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
-        "    col += vec3(ghs*(1.0-0.114))*pow(clamp(vec3(3.0)*b,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
-	    "\n"
-	    "    /* Level adjustment (curves) */\n"
-	    "    col *= vec3(1.0,1.1,1.0);\n"
-        "    col = clamp(col*1.3 + 0.75*col*col + 1.25*col*col*col*col*col,vec3(0.0),vec3(10.0));\n"
-	    "\n"
-	    "    /* Vignette */\n"
-        "    float vig = (0.1 + 1.0*16.0*curved_uv.x*curved_uv.y*(1.0-curved_uv.x)*(1.0-curved_uv.y));\n"
-	    "    vig = 1.3*pow(vig,0.5);\n"
-	    "    col *= vig;\n"
-	    "\n"
-	    "    /* Scanlines */\n"
-	    "    float scans = clamp( 0.5+0.2*sin(cos(20.0*time)*0.32+curved_uv.y*size.y*1.75), 0.0, 1.0);\n"
-	    "    float s = pow(scans,0.9);\n"
-	    "    col = col * vec3(s);\n"
-        "\n"
-	    "    /* Vertical lines (shadow mask) */\n"
-	    "    col*=1.0-0.23*(clamp((mod(gl_FragCoord.xy.x, 3.0))/2.0,0.0,1.0));\n"
-        "\n"
-	    "    /* Tone map */\n"
-	    "    col = filmic( col );\n"
-        "\n"
-	    "    /* Noise */\n"
-	    "    //vec2 seed = floor(curved_uv*resolution.xy*vec2(0.5))/resolution.xy;\n"
-        "    vec2 seed = curved_uv*resolution.xy;;\n"
-	    "    /* seed = curved_uv; */\n"
-	    "    col -= 0.015*pow(vec3(rand( seed +time ), rand( seed +time*2.0 ), rand( seed +time * 3.0 ) ), vec3(1.5) );\n"
-	    "\n"
-	    "    /* Flicker */\n"
-        "    col *= (1.0-0.004*(sin(50.0*time+curved_uv.y*2.0)*0.5+0.5));\n"
-        "\n"
-	    "    /* Clamp */\n"
-	    "    if (curved_uv.x < 0.0 || curved_uv.x > 1.0)\n"
-		"        col *= 0.0;\n"
-	    "    if (curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
-		"        col *= 0.0;\n"
-		"    col*=modulate; \n"
-	    "    /* Frame */\n"
-	    "    vec2 fscale = vec2( -0.019, -0.018 );\n"
-		"	vec2 fuv=vec2( uv.x, 1.0 - uv.y)*((1.0)+2.0*fscale)-fscale-vec2(-0.0, 0.005);\n"
-	    "    vec4 f=texture2D(frametexture, fuv * vec2(0.925, 0.81) + vec2( 0.042, 0.09 ));\n"
-	    "    f.xyz = mix( f.xyz, vec3(0.5,0.5,0.5), 0.5 );\n"
-	    "    float fvig = clamp( -0.00+512.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y), 0.2, 0.85 );\n"
-		"	col *= fvig;\n"
-        "    float expon = 1.4;\n"
-        "//    f.xyz = vec3(26.0/255.0,26.0/255.0,26.0/255.0);expon=1.0;\n"
-	    "    col = mix( col, mix( max( col, 0.0), pow( abs( f.xyz ), vec3( expon ) ), f.w), vec3( use_frame) );\n"
-        "    \n"
-		"	gl_FragColor = vec4( col, 1.0 );\n"
-		"	}\n"
-		"	\n"
-        "";
-
     crtemu_pc->crt_shader = crtemu_pc_internal_build_shader( crtemu_pc, vs_source, crt_fs_source );
     if( crtemu_pc->crt_shader == 0 ) goto failed;
-
-    char const* blur_fs_source = 
-        #ifdef CRTEMU_PC_WEBGL
-            "precision highp float;\n\n"
-        #else
-            "#version 120\n\n"
-        #endif
-		""
-        "varying vec2 uv;"
-		""
-        "uniform vec2 blur;"
-        "uniform sampler2D texture;"
-		""
-        "void main( void )"
-        "    {"
-        "    vec4 sum = texture2D( texture, uv ) * 0.2270270270;"
-        "    sum += texture2D(texture, vec2( uv.x - 4.0 * blur.x, uv.y - 4.0 * blur.y ) ) * 0.0162162162;"
-        "    sum += texture2D(texture, vec2( uv.x - 3.0 * blur.x, uv.y - 3.0 * blur.y ) ) * 0.0540540541;"
-        "    sum += texture2D(texture, vec2( uv.x - 2.0 * blur.x, uv.y - 2.0 * blur.y ) ) * 0.1216216216;"
-        "    sum += texture2D(texture, vec2( uv.x - 1.0 * blur.x, uv.y - 1.0 * blur.y ) ) * 0.1945945946;"
-        "    sum += texture2D(texture, vec2( uv.x + 1.0 * blur.x, uv.y + 1.0 * blur.y ) ) * 0.1945945946;"
-        "    sum += texture2D(texture, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
-        "    sum += texture2D(texture, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
-        "    sum += texture2D(texture, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
-        "    gl_FragColor = sum;"
-        "    }   "
-		"";
 
     crtemu_pc->blur_shader = crtemu_pc_internal_build_shader( crtemu_pc, vs_source, blur_fs_source );
     if( crtemu_pc->blur_shader == 0 ) goto failed;
 
-    char const* accumulate_fs_source = 
-        #ifdef CRTEMU_PC_WEBGL
-            "precision highp float;\n\n"
-        #else
-            "#version 120\n\n"
-        #endif
-		""
-        "varying vec2 uv;"
-		""
-        "uniform sampler2D tex0;"
-        "uniform sampler2D tex1;"
-        "uniform float modulate;"
-		""
-        "void main( void )"
-        "    {"
-        "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
-        "    vec4 b = texture2D( tex1, uv );"
-		""
-        "    gl_FragColor = max( a, b * 0.96 );"
-        "    }   "
-		"";
-
     crtemu_pc->accumulate_shader = crtemu_pc_internal_build_shader( crtemu_pc, vs_source, accumulate_fs_source );
     if( crtemu_pc->accumulate_shader == 0 ) goto failed;
-
-    char const* blend_fs_source = 
-        #ifdef CRTEMU_PC_WEBGL
-            "precision highp float;\n\n"
-        #else
-            "#version 120\n\n"
-        #endif
-		""
-        "varying vec2 uv;"
-		""
-        "uniform sampler2D tex0;"
-        "uniform sampler2D tex1;"
-        "uniform float modulate;"
-		""
-        "void main( void )"
-        "    {"
-        "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
-        "    vec4 b = texture2D( tex1, uv );"
-		""
-        "    gl_FragColor = max( a, b * 0.24 );"
-        "    }   "
-		"";
 
     crtemu_pc->blend_shader = crtemu_pc_internal_build_shader( crtemu_pc, vs_source, blend_fs_source );
     if( crtemu_pc->blend_shader == 0 ) goto failed;
 
-    char const* copy_fs_source = 
-        #ifdef CRTEMU_PC_WEBGL
-            "precision highp float;\n\n"
-        #else
-            "#version 120\n\n"
-        #endif
-		""
-        "varying vec2 uv;"
-		""
-        "uniform sampler2D tex0;"
-		""
-        "void main( void )"
-        "    {"
-        "    gl_FragColor = texture2D( tex0, uv );"
-        "    }   "
-		"";
-
     crtemu_pc->copy_shader = crtemu_pc_internal_build_shader( crtemu_pc, vs_source, copy_fs_source );
     if( crtemu_pc->copy_shader == 0 ) goto failed;
-
 
     crtemu_pc->GenTextures( 1, &crtemu_pc->accumulatetexture_a );
     crtemu_pc->GenFramebuffers( 1, &crtemu_pc->accumulatebuffer_a );
