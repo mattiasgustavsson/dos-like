@@ -1144,7 +1144,7 @@ static bool jar_mod_load( jar_mod_context_t * modctx, void * mod_data, int mod_d
             {
                 // 15 Samples modules support
                 // Shift the whole datas to make it look likes a standard 4 channels mod.
-                memcopy(&(modctx->song.signature), "M.K.", 4);
+                memcopy(&(modctx->song.signature), (void*)"M.K.", 4);
                 memcopy(&(modctx->song.length), &(modctx->song.samples[15]), 130);
                 memclear(&(modctx->song.samples[15]), 0, 480);
                 modmemory += 600;
