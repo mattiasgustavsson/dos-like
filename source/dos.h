@@ -1437,6 +1437,7 @@ void floodfill( int x, int y ) {
 		 * segment of scan line y-dy for x1<=x<=x2 was previously filled,
 		 * now explore adjacent pixels in scan line y
 		 */
+		int xs;
 		for( x = x1; x >= 0 && getpixel( x, y ) == ov; --x ) /* nothing */;
 		hline( x + 1, y, x1 - x, color );
 		if( x >= x1 ) goto skip;
@@ -1444,7 +1445,7 @@ void floodfill( int x, int y ) {
 		if( l < x1 ) FILLPUSH( y, l, x1 - 1, -dy );		/* leak on left? */
 		x = x1 + 1;
 		do {
-			int xs = x;
+			xs = x;
 			for( ; x < internals->screen.width && getpixel( x, y ) == ov; ++x ) /* nothing */;
 			hline( xs, y, x - xs, color );	
 			FILLPUSH( y, l, x - 1, dy);
@@ -1494,6 +1495,7 @@ void boundaryfill( int x, int y, int boundary ) {
 		 * segment of scan line y-dy for x1<=x<=x2 was previously filled,
 		 * now explore adjacent pixels in scan line y
 		 */
+		int xs;
 		for( x = x1; x >= 0 && getpixel( x, y ) != ov; --x ) /* nothing */;
 		hline( x + 1, y, x1 - x, color );
 		if( x >= x1 ) goto skip;
@@ -1501,7 +1503,7 @@ void boundaryfill( int x, int y, int boundary ) {
 		if( l < x1 ) FILLPUSH( y, l, x1 - 1, -dy );		/* leak on left? */
 		x = x1 + 1;
 		do {
-			int xs = x;
+			xs = x;
 			for( ; x < internals->screen.width && getpixel( x, y ) != ov; ++x ) /* nothing */;
 			hline( xs, y, x - xs, color );	
 			FILLPUSH( y, l, x - 1, dy);
@@ -3091,7 +3093,7 @@ static int app_proc( app_t* app, void* user_data ) {
     int curs_x = 0;
     int curs_y = 0;
     bool keystate[ KEYCOUNT ] = { 0 };
-    enum keycode_t keys[ 256 ] = { 0 };
+    enum keycode_t keys[ 256 ] = { (enum keycode_t)0 };
     char chars[ 256] = { 0 };
     APP_U64 crt_time_us = 0;
     APP_U64 prev_time = app_time_count( app );       
