@@ -1098,7 +1098,7 @@ void rectangle( int x, int y, int w, int h ) {
     if( internals->screen.font ) return;
     int color = internals->graphics.color;
 	hline( x, y, w, color );
-	hline( x, y + h - 1, w, color );
+	hline( x, y + h, w, color );
 	line( x, y, x, y + h );
 	line( x + w - 1, y, x + w - 1, y + h );
 }
