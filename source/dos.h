@@ -3021,12 +3021,17 @@ static int app_proc( app_t* app, void* user_data ) {
     app_pointer_default( app, &pointer_width, &pointer_height, pointer_pixels, &pointer_hotspot_x, &pointer_hotspot_y );
 
     app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
-    if( fullscreen ) {
+    #ifdef DISABLE_SYSTEM_CURSOR
         APP_U32 blank = 0;
         app_pointer( app, 1, 1, &blank, 0, 0 );
-    } else {
-        app_pointer( app, pointer_width, pointer_height, pointer_pixels, pointer_hotspot_x, pointer_hotspot_y );
-    }
+    #else
+        if( fullscreen ) {
+            APP_U32 blank = 0;
+            app_pointer( app, 1, 1, &blank, 0, 0 );
+        } else {
+            app_pointer( app, pointer_width, pointer_height, pointer_pixels, pointer_hotspot_x, pointer_hotspot_y );
+        }
+    #endif
 
     app_displays_t displays = app_displays( app );
     if( displays.count > 0 ) {
@@ -3158,12 +3163,17 @@ static int app_proc( app_t* app, void* user_data ) {
                 if( event->data.key == APP_KEY_F11 ) {
                     fullscreen = !fullscreen;
                     app_screenmode( app, fullscreen ? APP_SCREENMODE_FULLSCREEN : APP_SCREENMODE_WINDOW );
-                    if( fullscreen ) {
+                    #ifdef DISABLE_SYSTEM_CURSOR
                         APP_U32 blank = 0;
                         app_pointer( app, 1, 1, &blank, 0, 0 );
-                    } else {
-                        app_pointer( app, pointer_width, pointer_height, pointer_pixels, pointer_hotspot_x, pointer_hotspot_y );
-                    }
+                    #else
+                        if( fullscreen ) {
+                            APP_U32 blank = 0;
+                            app_pointer( app, 1, 1, &blank, 0, 0 );
+                        } else {
+                            app_pointer( app, pointer_width, pointer_height, pointer_pixels, pointer_hotspot_x, pointer_hotspot_y );
+                        }
+                    #endif
                 }
             } else if( event->type  == APP_INPUT_KEY_UP ) {
                 int index = (int)event->data.key;
