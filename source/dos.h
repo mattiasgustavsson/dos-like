@@ -62,6 +62,9 @@ int getpixel( int x, int y );
 void hline( int x, int y, int len, int color );
 void putpixel( int x, int y, int color );
 
+void setdrawtarget( unsigned char* pixels, int width, int height );
+void resetdrawtarget( void );
+
 void setcolor( int color );
 int getcolor( void );
 void line( int x1, int y1, int x2, int y2 );
@@ -406,6 +409,12 @@ struct internals_t {
     } screen;
 
     struct {
+        uint8_t* buffer;
+        int width;
+        int height;
+    } draw;
+    
+    struct {
         int color; 
 
         pixelfont_t* fonts[ 256 ];
@@ -495,6 +504,10 @@ static void internals_create( int sound_buffer_size ) {
     internals->screen.cellheight = 16;
     internals->screen.buffer = internals->screen.buffer0;
     memcpy( internals->screen.palette, default_palette, 1024 );
+
+    internals->draw.buffer = internals->screen.buffer;
+    internals->draw.width = internals->screen.width;
+    internals->draw.height = internals->screen.height;
 
     internals->graphics.color = 15;
     internals->graphics.fonts_count = 4;
@@ -659,6 +672,7 @@ void setvideomode( enum videomode_t mode ) {
     }
     memset( internals->screen.buffer0, 0, internals->screen.width * internals->screen.height * ( internals->screen.font ? 2 : 1 ) );
     memset( internals->screen.buffer1, 0, internals->screen.width * internals->screen.height * ( internals->screen.font ? 2 : 1 ) );
+    resetdrawtarget();
     thread_mutex_unlock( &internals->mutex );
 };
 
@@ -694,8 +708,14 @@ unsigned char* swapbuffers( void ) {
     if( internals->screen.doublebuffer ) {
         thread_mutex_lock( &internals->mutex );
         if( internals->screen.buffer == internals->screen.buffer0 ) {
+            if( internals->draw.buffer == internals->screen.buffer ) {
+                internals->draw.buffer = internals->screen.buffer1;
+            }
             internals->screen.buffer = internals->screen.buffer1;
         } else {
+            if( internals->draw.buffer == internals->screen.buffer ) {
+                internals->draw.buffer = internals->screen.buffer0;
+            }
             internals->screen.buffer = internals->screen.buffer0;
         }
         thread_mutex_unlock( &internals->mutex );
@@ -739,8 +759,8 @@ void getpal( int index, int* r, int* g, int* b ) {
 
 int getpixel( int x, int y ) {
     if( internals->screen.font ) return 0;
-    if( x >= 0 && y >= 0 && x < internals->screen.width && y < internals->screen.height ) {
-        return internals->screen.buffer[ x + internals->screen.width * y ];
+    if( x >= 0 && y >= 0 && x < internals->draw.width && y < internals->draw.height ) {
+        return internals->draw.buffer[ x + internals->draw.width * y ];
     } else {
         return 0;
     }
@@ -749,9 +769,25 @@ int getpixel( int x, int y ) {
 
 void putpixel( int x, int y, int color ) {
     if( internals->screen.font ) return;
-    if( x >= 0 && y >= 0 && x < internals->screen.width && y < internals->screen.height ) {
-        internals->screen.buffer[ x + internals->screen.width * y ] = (uint8_t)color;
+    if( x >= 0 && y >= 0 && x < internals->draw.width && y < internals->draw.height ) {
+        internals->draw.buffer[ x + internals->draw.width * y ] = (uint8_t)color;
     }
+}
+
+
+void setdrawtarget( unsigned char* pixels, int width, int height ) {
+    if( internals->screen.font ) return;
+    internals->draw.buffer = pixels;
+    internals->draw.width = width;
+    internals->draw.height = height;
+}
+
+
+void resetdrawtarget( void ) {
+    if( internals->screen.font ) return;
+    internals->draw.buffer = internals->screen.buffer;
+    internals->draw.width = internals->screen.width;
+    internals->draw.height = internals->screen.height;
 }
 
 
@@ -802,9 +838,9 @@ void wraptextxy( int x, int y, char const* text, int wrap_width ) {
     if( internals->screen.font ) return;
     int color = internals->graphics.color;
     pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];
-    PIXELFONT_COLOR* target = internals->screen.buffer;
-    int width = internals->screen.width;
-    int height = internals->screen.height;
+    PIXELFONT_COLOR* target = internals->draw.buffer;
+    int width = internals->draw.width;
+    int height = internals->draw.height;
     pixelfont_align_t align = PIXELFONT_ALIGN_LEFT;
     int hspacing = 0;
 	int vspacing = 0;
@@ -822,9 +858,9 @@ void centertextxy( int x, int y, char const* text, int wrap_width ) {
     if( internals->screen.font ) return;
     int color = internals->graphics.color;
     pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];
-    PIXELFONT_COLOR* target = internals->screen.buffer;
-    int width = internals->screen.width;
-    int height = internals->screen.height;
+    PIXELFONT_COLOR* target = internals->draw.buffer;
+    int width = internals->draw.width;
+    int height = internals->draw.height;
     pixelfont_align_t align = PIXELFONT_ALIGN_CENTER;
     int hspacing = 0;
 	int vspacing = 0;
@@ -842,9 +878,9 @@ void outtextxy( int x, int y, char const* text ) {
     if( internals->screen.font ) return;
     int color = internals->graphics.color;
     pixelfont_t* font = internals->graphics.fonts[ internals->graphics.current_font ];
-    PIXELFONT_COLOR* target = internals->screen.buffer;
-    int width = internals->screen.width;
-    int height = internals->screen.height;
+    PIXELFONT_COLOR* target = internals->draw.buffer;
+    int width = internals->draw.width;
+    int height = internals->draw.height;
     pixelfont_align_t align = PIXELFONT_ALIGN_LEFT;
     int wrap_width = 0;
     int hspacing = 0;
@@ -921,13 +957,13 @@ static bool blitclip( int* px, int *py, int width, int height, int* psrcx, int* 
     if( srcy + srch >= height ) {
         srch += ( height - ( srcy + srch ) );
     }
-    if( x + srcw >= internals->screen.width ) {
-        srcw += ( internals->screen.width - ( x + srcw ) );
+    if( x + srcw >= internals->draw.width ) {
+        srcw += ( internals->draw.width - ( x + srcw ) );
     }
-    if( y + srch >= internals->screen.height ) {
-        srch += ( internals->screen.height - ( y + srch ) );
+    if( y + srch >= internals->draw.height ) {
+        srch += ( internals->draw.height - ( y + srch ) );
     }
-    if( srcw <= 0 || srch <= 0 || x + srcw < 0 || y + srch < 0 || x > internals->screen.width || y > internals->screen.height ) {
+    if( srcw <= 0 || srch <= 0 || x + srcw < 0 || y + srch < 0 || x > internals->draw.width || y > internals->draw.height ) {
         return false;
     } else {
         *px = x;
@@ -947,12 +983,12 @@ void blit( int x, int y, unsigned char* source, int width, int height, int srcx,
         return;
     }
 
-    uint8_t* dst = internals->screen.buffer + x + y * internals->screen.width;
+    uint8_t* dst = internals->draw.buffer + x + y * internals->draw.width;
     uint8_t* src = source + srcx + srcy * width;
     for( int iy = 0; iy < srch; ++iy ) {
         memcpy( dst, src, srcw );
         src += width;
-        dst += internals->screen.width;
+        dst += internals->draw.width;
     }
 }
 
@@ -963,7 +999,7 @@ void maskblit( int x, int y, unsigned char* source, int width, int height, int s
         return;
     }
 
-    uint8_t* dst = internals->screen.buffer + x + y * internals->screen.width;
+    uint8_t* dst = internals->draw.buffer + x + y * internals->draw.width;
     uint8_t* src = source + srcx + srcy * width;
     for( int iy = 0; iy < srch; ++iy ) {
         for( int ix = 0; ix < srcw; ++ix ) {
@@ -972,7 +1008,7 @@ void maskblit( int x, int y, unsigned char* source, int width, int height, int s
             }
         }
         src += width;
-        dst += internals->screen.width;
+        dst += internals->draw.width;
     }
 }
 
@@ -1052,16 +1088,16 @@ unsigned char* loadgif( char const* filename, int* width, int* height, int* palc
 
 void hline( int x, int y, int len, int color ) {
     if( internals->screen.font ) return;
-	if( y < 0 || y >= internals->screen.height ) {
+	if( y < 0 || y >= internals->draw.height ) {
         return;
     }
 	if( x < 0 ) { 
         len += x; x = 0; 
     }
-	if( x + len > internals->screen.width ) {
-        len = internals->screen.width - x;
+	if( x + len > internals->draw.width ) {
+        len = internals->draw.width - x;
     }
-	uint8_t* scr = internals->screen.buffer + y * internals->screen.width + x;
+	uint8_t* scr = internals->draw.buffer + y * internals->draw.width + x;
 	uint8_t* end = scr + len;
 	while( scr < end ) *scr++ = (uint8_t)color;
 }
@@ -1407,7 +1443,7 @@ void floodfill( int x, int y ) {
 	#define FILLMAX 10000		/* FILLMAX depth of stack */
 
 	#define FILLPUSH( Y, XL, XR, DY )	/* FILLPUSH new segment on stack */ \
-		if( sp < stack + FILLMAX && Y + ( DY ) >= 0 && Y + ( DY ) < internals->screen.height ) \
+		if( sp < stack + FILLMAX && Y + ( DY ) >= 0 && Y + ( DY ) < internals->draw.height ) \
 		    { sp->y = Y; sp->xl = XL; sp->xr = XR; sp->dy = DY; ++sp; }
 
 	#define FILLPOP( Y, XL, XR, DY )	/* FILLPOP segment off stack */ \
@@ -1427,7 +1463,7 @@ void floodfill( int x, int y ) {
 	struct segment_t stack[ FILLMAX ], *sp = stack;	/* stack of filled segments */
 
 	ov = getpixel( x, y );		/* read pv at seed point */
-	if( ov == color || x < 0 || x >= internals->screen.width || y < 0 || y >= internals->screen.height ) return;
+	if( ov == color || x < 0 || x >= internals->draw.width || y < 0 || y >= internals->draw.height ) return;
 	FILLPUSH( y, x, x, 1 );			/* needed in some cases */
 	FILLPUSH( y + 1, x, x, -1 );		/* seed segment (FILLPOPped 1st) */
 
@@ -1447,7 +1483,7 @@ void floodfill( int x, int y ) {
 		x = x1 + 1;
 		do {
 			xs = x;
-			for( ; x < internals->screen.width && getpixel( x, y ) == ov; ++x ) /* nothing */;
+			for( ; x < internals->draw.width && getpixel( x, y ) == ov; ++x ) /* nothing */;
 			hline( xs, y, x - xs, color );	
 			FILLPUSH( y, l, x - 1, dy);
 			if( x > x2 + 1 ) FILLPUSH( y, x2 + 1, x - 1, -dy);	/* leak on right? */
@@ -1465,7 +1501,7 @@ void boundaryfill( int x, int y, int boundary ) {
 	#define FILLMAX 10000		/* FILLMAX depth of stack */
 
 	#define FILLPUSH( Y, XL, XR, DY )	/* FILLPUSH new segment on stack */ \
-		if( sp < stack + FILLMAX && Y + ( DY ) >= 0 && Y + ( DY ) < internals->screen.height ) \
+		if( sp < stack + FILLMAX && Y + ( DY ) >= 0 && Y + ( DY ) < internals->draw.height ) \
 		    { sp->y = Y; sp->xl = XL; sp->xr = XR; sp->dy = DY; ++sp; }
 
 	#define FILLPOP( Y, XL, XR, DY )	/* FILLPOP segment off stack */ \
@@ -1485,7 +1521,7 @@ void boundaryfill( int x, int y, int boundary ) {
 	struct segment_t stack[ FILLMAX ], *sp = stack;	/* stack of filled segments */
 
 	ov = boundary;
-	if( x < 0 || x >= internals->screen.width || y < 0 || y >= internals->screen.height ) return;
+	if( x < 0 || x >= internals->draw.width || y < 0 || y >= internals->draw.height ) return;
 	FILLPUSH( y, x, x, 1 );			/* needed in some cases */
 	FILLPUSH( y + 1, x, x, -1 );		/* seed segment (FILLPOPped 1st) */
 
@@ -1505,7 +1541,7 @@ void boundaryfill( int x, int y, int boundary ) {
 		x = x1 + 1;
 		do {
 			xs = x;
-			for( ; x < internals->screen.width && getpixel( x, y ) != ov; ++x ) /* nothing */;
+			for( ; x < internals->draw.width && getpixel( x, y ) != ov; ++x ) /* nothing */;
 			hline( xs, y, x - xs, color );	
 			FILLPUSH( y, l, x - 1, dy);
 			if( x > x2 + 1 ) FILLPUSH( y, x2 + 1, x - 1, -dy);	/* leak on right? */
@@ -3382,6 +3418,7 @@ static int app_proc( app_t* app, void* user_data ) {
 	        uint32_t const* data = font; 
             int chr_width = *data++;
             int chr_height = *data++;
+            int chr_baseline = *data++;
             int chr_mod = 256 / chr_width;
 	        for( int y = 0; y < height; ++y ) { 
 	            for( int x = 0; x < width; ++x ) { 
