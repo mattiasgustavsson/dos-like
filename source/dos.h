@@ -10,6 +10,8 @@ file contains licensing information for the code in that file.
 
 #ifndef dos_h
 #define dos_h
+//#define DISABLE_SCREEN_FRAME
+//#define DISABLE_CRT_CURVE
 
 enum videomode_t {
     videomode_40x25_8x8,
