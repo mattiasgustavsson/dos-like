@@ -10,8 +10,6 @@ file contains licensing information for the code in that file.
 
 #ifndef dos_h
 #define dos_h
-//#define DISABLE_SCREEN_FRAME
-//#define DISABLE_CRT_CURVE
 
 enum videomode_t {
     videomode_40x25_8x8,
@@ -3491,12 +3489,16 @@ static int app_proc( app_t* app, void* user_data ) {
         APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
         prev_time = time;
         crt_time_us += delta_time_us;
-        #ifndef DISABLE_SCREEN_FRAME
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
+        #ifndef DISABLE_CRT_EMULATION
+            #ifndef DISABLE_SCREEN_FRAME
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
+            #else
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff000000 );
+            #endif
+            app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
         #else
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff000000 );
+            app_present( app, screen_xbgr, width, height, 0xffffff, 0xff000000 );
         #endif
-        app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
     }
 
     app_sound( app, 0, NULL, NULL );
@@ -3515,8 +3517,12 @@ static int app_proc( app_t* app, void* user_data ) {
             crt_time_us += delta_time_us;
             int v = ( ( 60 - i ) * 255 ) / 60;
             uint32_t fade = ( v << 16 ) | v << 8 | v;
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, fade, 0xff1a1a1a );
-            app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
+            #ifndef DISABLE_CRT_EMULATION
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, fade, 0xff1a1a1a );
+                app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
+            #else
+                app_present( app, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
+            #endif
             frametimer_update( frametimer );
         }
         user_exit = thread_signal_wait( &user_thread_context.user_thread_terminated, 30 );
