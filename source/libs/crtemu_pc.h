@@ -21,6 +21,10 @@ before you include this file in *one* C/C++ file to create the implementation.
     #define CRTEMU_PC_U64 unsigned long long
 #endif
 
+#if defined(DISABLE_CRT_CURVE) && !defined(DISABLE_SCREEN_FRAME)
+    #define DISABLE_SCREEN_FRAME
+#endif
+
 typedef struct crtemu_pc_t crtemu_pc_t;
 
 crtemu_pc_t* crtemu_pc_create( void* memctx );
