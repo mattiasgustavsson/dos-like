@@ -181,12 +181,16 @@ enum keycode_t {
     KEY_OEM_1, KEY_OEM_PLUS, KEY_OEM_COMMA, KEY_OEM_MINUS, KEY_OEM_PERIOD, KEY_OEM_2, KEY_OEM_3, KEY_OEM_4, KEY_OEM_5, 
     KEY_OEM_6, KEY_OEM_7, KEY_OEM_8, KEY_OEM_102, KEY_PROCESSKEY, KEY_ATTN, KEY_CRSEL, KEY_EXSEL, KEY_EREOF, KEY_PLAY, 
     KEY_ZOOM, KEY_NONAME, KEY_PA1, KEY_OEM_CLEAR, 
-    KEYCOUNT 
+    KEYCOUNT, KEYPADDING = 0xFFFFFFFF 
 };
 
+
 int keystate( enum keycode_t key );
+
+#define KEY_MODIFIER_RELEASED 0x80000000 
 enum keycode_t* readkeys( void );
 char const* readchars( void );
+
 int mousex( void );
 int mousey( void );
 int mouserelx( void );
@@ -3179,6 +3183,9 @@ static int app_proc( app_t* app, void* user_data ) {
                 int index = (int)event->data.key;
                 if( index >= 0 && index < KEYCOUNT ) {
                     keystate[ index ] = false;
+                    if( keys_index < 255 ) {
+                        keys[ keys_index++ ] = (enum keycode_t)( ( (uint32_t)event->data.key ) | KEY_MODIFIER_RELEASED );
+                    }
                 }
             } else if( event->type  == APP_INPUT_CHAR ) {
                 if( event->data.char_code > 0 ) {
