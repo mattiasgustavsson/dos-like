@@ -21,6 +21,10 @@ before you include this file in *one* C/C++ file to create the implementation.
     #define CRTEMU_PC_U64 unsigned long long
 #endif
 
+#if defined(DISABLE_CRT_CURVE) && !defined(DISABLE_SCREEN_FRAME)
+    #define DISABLE_SCREEN_FRAME
+#endif
+
 typedef struct crtemu_pc_t crtemu_pc_t;
 
 crtemu_pc_t* crtemu_pc_create( void* memctx );
@@ -410,8 +414,10 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
         #endif
         "vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )\n"
 	    "    {\n"
-	    "    tc = tc * vec2(1.035, 0.96) + vec2( mix( -0.018,-0.0125*0.75,use_frame), 0.02);\n"
+        #ifndef DISABLE_CRT_CURVE
+        "    tc = tc * vec2(1.035, 0.96) + vec2( mix( -0.018,-0.0125*0.75,use_frame), 0.02);\n"
 		"	tc = tc * 1.2 - 0.1;\n"
+        #endif
 	    "    vec3 s = pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) );\n"
 	    "    return s*vec3(1.25);\n"
 	    "    }\n"
@@ -422,6 +428,7 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "    return (x*(6.2*x+0.5))/(x*(6.2*x+1.7)+0.06);\n"
 	    "    }\n"
         "\n"
+        #ifndef DISABLE_CRT_CURVE
         "vec2 curve( vec2 uv )\n"
 	    "    {\n"
 	    "    uv = (uv - 0.5) * 2.0;\n"
@@ -433,6 +440,7 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "    return uv;\n"
 	    "    }\n"
         "\n"
+        #endif
         "float rand(vec2 co)\n"
 	    "    {\n"
         "    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);\n"
@@ -440,11 +448,17 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "    \n"
         "void main(void)\n"
 		"	{\n"
-	    "    /* Curve */\n"
+        #ifndef DISABLE_CRT_CURVE
+        "    /* Curve */\n"
 	    "    vec2 curved_uv = mix( curve( uv ), uv, 0.8 );\n"
 	    "    float scale = 0.04;\n"
 	    "    vec2 scuv = curved_uv*(1.0-scale)+scale/2.0+vec2(0.003, -0.001);\n"
         "\n"
+        #else
+        "    /* Not Curved */\n"
+        "    vec2 curved_uv = uv;\n"
+	    "    vec2 scuv = uv;\n"
+        #endif
 	    "    /* Main color, Bleed */\n"
 	    "    vec3 col;\n"
 	    "    float x =  sin(0.1*time+curved_uv.y*13.0)*sin(0.23*time+curved_uv.y*19.0)*sin(0.3+0.11*time+curved_uv.y*23.0)*0.0012;\n"
@@ -469,7 +483,6 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "    vec3 b = tsample(blurbuffer, vec2(x-0.017*1.0, -0.003)*0.35+0.007*vec2( 0.35*sin(2.0/3.0 + 15.0*curved_uv.y + 0.7*time), \n"
         "        0.35*cos( 2.0/3.0 + 10.0*curved_uv.y + 1.63*time) )+vec2(scuv.x-0.002,scuv.y+0.000),\n"
         "        5.3+1.3*sin( 3.0/7.0 + 91.0*curved_uv.x + 1.65*time),resolution).xyz*vec3(0.25,0.25,0.5);\n"
-	    "\n"
 	    "    col += vec3(ghs*(1.0-0.299))*pow(clamp(vec3(3.0)*r,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
         "    col += vec3(ghs*(1.0-0.587))*pow(clamp(vec3(3.0)*g,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
         "    col += vec3(ghs*(1.0-0.114))*pow(clamp(vec3(3.0)*b,vec3(0.0),vec3(1.0)),vec3(2.0))*vec3(i);\n"
@@ -480,7 +493,7 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "\n"
 	    "    /* Vignette */\n"
         "    float vig = (0.1 + 1.0*16.0*curved_uv.x*curved_uv.y*(1.0-curved_uv.x)*(1.0-curved_uv.y));\n"
-	    "    vig = 1.3*pow(vig,0.5);\n"
+        "    vig = 1.3*pow(vig,0.5);\n"
 	    "    col *= vig;\n"
 	    "\n"
 	    "    /* Scanlines */\n"
@@ -503,7 +516,7 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 	    "    /* Flicker */\n"
         "    col *= (1.0-0.004*(sin(50.0*time+curved_uv.y*2.0)*0.5+0.5));\n"
         "\n"
-	    "    /* Clamp */\n"
+        "    /* Clamp */\n"
 	    "    if (curved_uv.x < 0.0 || curved_uv.x > 1.0)\n"
 		"        col *= 0.0;\n"
 	    "    if (curved_uv.y < 0.0 || curved_uv.y > 1.0)\n"
@@ -514,8 +527,12 @@ crtemu_pc_t* crtemu_pc_create( void* memctx )
 		"	vec2 fuv=vec2( uv.x, 1.0 - uv.y)*((1.0)+2.0*fscale)-fscale-vec2(-0.0, 0.005);\n"
 	    "    vec4 f=texture2D(frametexture, fuv * vec2(0.925, 0.81) + vec2( 0.042, 0.09 ));\n"
 	    "    f.xyz = mix( f.xyz, vec3(0.5,0.5,0.5), 0.5 );\n"
+        #ifndef DISABLE_CRT_CURVE
 	    "    float fvig = clamp( -0.00+512.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y), 0.2, 0.85 );\n"
-		"	col *= fvig;\n"
+        #else
+        "    float fvig = clamp( -0.00+512.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y), 1.0, 0.85 );\n"
+        #endif
+        "	col *= fvig;\n"
         "    float expon = 1.4;\n"
         "//    f.xyz = vec3(26.0/255.0,26.0/255.0,26.0/255.0);expon=1.0;\n"
 	    "    col = mix( col, mix( max( col, 0.0), pow( abs( f.xyz ), vec3( expon ) ), f.w), vec3( use_frame) );\n"
