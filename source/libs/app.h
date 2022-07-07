@@ -128,7 +128,7 @@ typedef struct app_input_event_t
         app_key_t key;
         char char_code;
         struct { int x; int y; } mouse_pos;
-        struct { float x; float y; } mouse_delta;
+        struct { int x; int y; } mouse_delta;
         float wheel_delta;
         struct { int x; int y; float pressure; app_pressed_t tip; app_pressed_t lower; app_pressed_t upper; } tablet;
         } data;
