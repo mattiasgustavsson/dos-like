@@ -8,160 +8,461 @@ file contains licensing information for the code in that file.
 
 */
 
+/*! \file dos.h
+ *
+ * \mainpage dos-like API
+ *
+ * See the documentation of the main header file [dos.h](./dos_8h.html).
+ */
+
 #ifndef dos_h
 #define dos_h
-
+ 
+/// \brief The video mode.
+///
+/// Each variant is either in text mode or graphics mode.
 enum videomode_t {
+    /// Text mode, 40 columns and 25 rows, 8x8 font size.
     videomode_40x25_8x8,
+    /// Text mode, 40 columns and 25 rows, 9x16 font size.
     videomode_40x25_9x16,
+    /// Text mode, 80 columns and 25 rows, 8x8 font size.
     videomode_80x25_8x8,
+    /// \brief Text mode, 80 columns and 25 rows, 8x16 font size.
+    /// This is the mode set by default.
     videomode_80x25_8x16,
+    /// Text mode, 80 columns and 25 rows, 9x16 font size.
     videomode_80x25_9x16,
+    /// Text mode, 80 columns and 43 rows, 8x8 font size.
     videomode_80x43_8x8,
+    /// Text mode, 80 columns and 50 rows, 8x8 font size.
     videomode_80x50_8x8,
+    /// Graphics mode, 320x200 pixels.
     videomode_320x200,
+    /// Graphics mode, 320x240 pixels.
     videomode_320x240,
+    /// Graphics mode, 320x400 pixels.
     videomode_320x400,
+    /// Graphics mode, 640x200 pixels.
     videomode_640x200,
+    /// Graphics mode, 640x350 pixels.
     videomode_640x350,
+    /// Graphics mode, 640x400 pixels.
     videomode_640x400,
+    /// Graphics mode, 640x480 pixels.
     videomode_640x480,
 };
 
+/// \brief Sets the application video mode.
 void setvideomode( enum videomode_t mode );
+/// \brief Enables or disables screen double buffering
 void setdoublebuffer( int enabled );
+/// \brief Gets the current screen width in pixels
 int screenwidth( void );
+/// \brief Gets the current screen height in pixels
 int screenheight( void );
+/// \brief Obtains a pointer to the screen buffer currently selected for writing.
+///
+/// Only makes sense in graphics mode.
 unsigned char* screenbuffer( void );
+/// \brief Swaps the current screen buffers
+/// and returns a pointer of the current screen buffer.
+///
+/// Only makes sense in graphics mode.
+///
+/// # Example
+///
+/// ```c
+/// setvideomode(videomode_320x200);
+/// setdoublebuffer(1);
+/// unsigned char* buffer = screenbuffer();
+///
+/// while(1) {
+///     waitvbl();
+///     // do things with buffer
+///     for (int y = 0; y < 200; y++) {
+///         for (int x = 0; x < 320; x++) {
+///             buffer[y * 320 + x] = (unsigned char)i;
+///         }
+///     }
+///
+///     buffer = swapbuffers();
+/// }
+/// ```
 unsigned char* swapbuffers( void );
+/// \brief Waits for a vertical blanking signal.
+///
+/// This should usually be called once per frame.
 void waitvbl( void );
+/// \brief Set the color in a specific palette index
 void setpal( int index, int r, int g, int b );
+/// \brief Gets the color in a specified palette index
 void getpal( int index, int* r, int* g, int* b );
 
+/// \brief Checks whether the application should shut down.
+///
+/// # Example
+///
+/// A typical application loop inside `main` may look like this:
+///
+/// ```c
+/// while( !shuttingdown() ) {
+///     waitvbl();
+///     // your code here
+/// }
+/// ```
 int shuttingdown( void );
 
 
+/// \brief Writes a string to the screen, at the current cursor position.
+///
+/// Does nothing unless the video is in text mode.
 void cputs( char const* string );
+/// \brief Sets the color of the text.
+///
+/// Only works in text mode.
 void textcolor( int color );
+/// \brief Sets the background color of the text by palette color index.
+///
+/// Only works in text mode.
 void textbackground( int color );
+/// \brief Moves the cursor to the specified position.
+///
+/// Only works in text mode.
 void gotoxy( int x, int y );
+/// \brief Gets the cursor's current X position.
 int wherex( void );
+/// \brief Gets the cursor's current Y position.
 int wherey( void );
+/// \brief Clears the screen when in text mode.
 void clrscr( void );
+/// \brief Enables the blinking text cursor.
+///
+/// The cursor is visible to the user by default.
+///
+/// Only works in text mode.
 void curson( void );
+/// Hides the text cursor.
+///
+/// Only works in text mode.
 void cursoff( void );
 
+/// \brief Loads an image from a GIF file.
+///
+/// \param filename path to the GIF file
+/// \param width output parameter which will contain the image's width
+/// \param height output parameter which will contain the image's height
+/// \param palcount output parameter which will contain
+///        the number of colors in the image's palette
+/// \param palette output parameter to which the image's palette will be written
+///        which are filled with the image data.
+/// \return a pointer to the image pixel data
 unsigned char* loadgif( char const* filename, int* width, int* height, int* palcount, unsigned char palette[ 768 ] );
 
+/// \brief Blits a rectangular portion of a video data buffer to the screen.
+///
+/// \param x target X coordinate of the top-left corner to blit on the screen 
+/// \param y target Y coordinate of the top-left corner to blit on the screen
+/// \param source the image source data
+/// \param width the width of the source data
+/// \param height the height of the source data
+/// \param srcx the X coordinate of the starting position to blit from the source data
+/// \param srcy the Y coordinate of the starting position to blit from the source data
+/// \param srcw the width to effectively blit from the source data
+/// \param srch the height to effectively blit from the source data
 void blit( int x, int y, unsigned char* source, int width, int height, int srcx, int srcy, int srcw, int srch );
+
+/// \brief Blits a masked rectangular portion of a video data buffer to the screen,
+/// skipping pixels encoded as fully transparent.
+///
+/// \param x target X coordinate of the top-left corner to blit on the screen 
+/// \param y target Y coordinate of the top-left corner to blit on the screen
+/// \param source the image source data
+/// \param width the width of the source data
+/// \param height the height of the source data
+/// \param srcx the X coordinate of the starting position to blit from the source data
+/// \param srcy the Y coordinate of the starting position to blit from the source data
+/// \param srcw the width to effectively blit from the source data
+/// \param srch the height to effectively blit from the source data
+/// \param colorkey the color to skip when blitting
 void maskblit( int x, int y, unsigned char* source, int width, int height, int srcx, int srcy, int srcw, int srch, 
     int colorkey );
 
+/// \brief Clears the screen when in graphics mode.
 void clearscreen( void );
+
+/// \brief Gets the color of a single pixel on the screen.
+///
+/// Only makes sense in graphics mode.
 int getpixel( int x, int y );
+/// \brief Draws a horizonal line.
+///
+/// Only makes sense in graphics mode.
 void hline( int x, int y, int len, int color );
+/// \brief Puts a color on a single pixel.
+///
+/// Only makes sense in graphics mode.
 void putpixel( int x, int y, int color );
 
+/// \brief Changes the target for drawing operations
+/// to the given pixel buffer,
+/// instead of the current screen buffer.
 void setdrawtarget( unsigned char* pixels, int width, int height );
+/// \brief Resets the target for drawing operations
+/// to the current screen buffer.
 void resetdrawtarget( void );
 
+/// \brief Sets the foreground color to the given palette color index
+/// for subsequent drawing operations.
+///
+/// Only works in graphics mode.
 void setcolor( int color );
+/// \brief Gets the current foreground color by palette color index.
+///
+/// Only makes sense in graphics mode.
 int getcolor( void );
+/// \brief Draws a line on the screen from one position to another.
+///
+/// Only makes sense in graphics mode.
 void line( int x1, int y1, int x2, int y2 );
+/// \brief Draws a non-filled rectangle on the screen.
+///
+/// Only makes sense in graphics mode.
 void rectangle( int x, int y, int w, int h );
+/// \brief Draws a filled rectangle on the screen.
+///
+/// Only makes sense in graphics mode.
 void bar( int x, int y, int w, int h );
+/// \brief Draws a circle with no filling on the screen.
+///
+/// Only makes sense in graphics mode.
 void circle( int x, int y, int r );
+/// \brief Draws a filled circle on the screen.
+///
+/// Only makes sense in graphics mode.
 void fillcircle( int x, int y, int r );
+/// \brief Draws a non-filled ellipse on the screen.
+///
+/// Only makes sense in graphics mode.
 void ellipse( int x, int y, int rx, int ry );
+/// \brief Draws a filled ellipse on the screen.
+///
+/// Only makes sense in graphics mode.
 void fillellipse( int x, int y, int rx, int ry );
+/// \brief Draws a poly-line on the screen,
+/// with the given flat list of XY coordinates in pixels.
+///
+/// Only makes sense in graphics mode.
 void drawpoly( int* points_xy, int count );
+/// \brief Draws a filled polygon on the screen,
+/// with the given flat list of XY coordinates in pixels.
+///
+/// Only makes sense in graphics mode.
 void fillpoly( int* points_xy, int count );
+/// \brief Flood fills the screen from the given position.
+///
+/// Only makes sense in graphics mode.
 void floodfill( int x, int y );
+/// \brief Flood fills the screen from the given position
+/// with the given color as boundary.
+///
+/// Only makes sense in graphics mode.
 void boundaryfill( int x, int y, int boundary );
 
+/// \brief Blits a text to the screen at the given position.
+///
+/// XY coordinates are in pixels.
+///
+/// Only makes sense in graphics mode.
 void outtextxy( int x, int y, char const* text ); 
+/// \brief Blits a text to the screen at the given position,
+/// wrapping around before it goes beyond the width specified.
+///
+/// XY coordinates are in pixels.
+///
+/// Only makes sense in graphics mode.
 void wraptextxy( int x, int y, char const* text, int width ); 
+/// \brief Blits a text to the screen centered at the given position.
+///
+/// XY coordinates are in pixels.
+///
+/// Only makes sense in graphics mode.
 void centertextxy( int x, int y, char const* text, int width ); 
 
 enum {
+    /// Default font, 8x8 size
     DEFAULT_FONT_8X8  = 1,
+    /// Default font, 8x16 size
     DEFAULT_FONT_8X16 = 2,
+    /// Default font, 9x16 size
     DEFAULT_FONT_9X16 = 3,
 };
 
+/// \brief Sets the font and style of upcoming text blit operations.
+///
+/// This is only available in graphics mode with a font loaded.
+/// The operations is ignored if `font` does not correspond to a valid font.
 void settextstyle( int font, int bold, int italic, int underline );
+/// \brief Installs a font from a .fnt file.
+///
+/// \return the identifier of the font
 int installuserfont( char const* filename ); 
 
 
 enum {
+    /// Built-in soundbank: Sound Blaster AWE32
     DEFAULT_SOUNDBANK_AWE32 = 1,
+    /// Built-in soundbank: Sound Blaster 16
     DEFAULT_SOUNDBANK_SB16  = 2,
 };
 
+/// \brief Sets this soundbank for subsequent audio operations.
 void setsoundbank( int soundbank );
+/// \brief Installs a soundbank from an .sf2 or .op2 file.
+///
+/// \return the identifier of the soundbank
 int installusersoundbank( char const* filename ); 
 
 
+/// \brief The total number of music channels supported by the engine.
 #define MUSIC_CHANNELS 16
+/// \brief Pushes a note on the given music channel.
+///
+/// \param channel the channel to play the note on
+/// \param note a number between 0 and 127 representing the note's pitch.
+/// \param velocity a number between 0 and 127.
 void noteon( int channel, int note, int velocity);
+
+/// \brief Release a note on the given music channel.
+///
+/// \param channel the applicable channel
+/// \param note a number between 0 and 127 representing the note's pitch.
 void noteoff( int channel, int note );
+/// \brief Releases all notes on the given music channel.
 void allnotesoff( int channel );
+/// \brief Sets the current instrument on the given music channel.
 void setinstrument( int channel, int instrument );
 
 struct music_t;
+/// \brief Loads a music from a MIDI file.
 struct music_t* loadmid( char const* filename );
+/// \brief Loads a music from a MUS file.
 struct music_t* loadmus( char const* filename );
+/// \brief Loads a music from a MOD file.
 struct music_t* loadmod( char const* filename );
+/// \brief Loads a music from a OPB file.
 struct music_t* loadopb( char const* filename );
+/// \brief Creates a music object from the byte data of a MUS file.
 struct music_t* createmus( void* data, int size );
+/// \brief Plays the given music, stopping any other music currently playing.
+///
+/// \param music pointer to the music object
+/// \param loop if true, the music will loop forever
+/// \param volume a number between 0 (silent) and 255 (full volume)
 void playmusic( struct music_t* music, int loop, int volume );
+/// \brief Stops any music that is currently playing.
 void stopmusic( void );
+/// \brief Checks whether the application is currently playing any music.
 int musicplaying( void );
+/// \brief Sets the music volume.
 void musicvolume( int volume );
 
+/// \brief A sound mode.
 enum soundmode_t {
+    /// 8-bit mono, 5000 Hz
     soundmode_8bit_mono_5000,
+    /// 8-bit mono, 8000 Hz
     soundmode_8bit_mono_8000,
+    /// 8-bit mono, 11025 Hz
     soundmode_8bit_mono_11025,
+    /// 8-bit mono, 16000 Hz
     soundmode_8bit_mono_16000,
+    /// 8-bit mono, 22050 Hz
     soundmode_8bit_mono_22050,
+    /// 8-bit mono, 32000 Hz
     soundmode_8bit_mono_32000,
+    /// 8-bit mono, 44100 Hz
     soundmode_8bit_mono_44100,
+    /// 16-bit mono, 5000 Hz
     soundmode_16bit_mono_5000,
+    /// 16-bit mono, 8000 Hz
     soundmode_16bit_mono_8000,
+    /// 16-bit mono, 11025 Hz
     soundmode_16bit_mono_11025,
+    /// 16-bit mono, 16000 Hz
     soundmode_16bit_mono_16000,
+    /// 16-bit mono, 22050 Hz
     soundmode_16bit_mono_22050,
+    /// 16-bit mono, 32000 Hz
     soundmode_16bit_mono_32000,
+    /// 16-bit mono, 44100 Hz
     soundmode_16bit_mono_44100,
+    /// 8-bit stereo, 5000 Hz
     soundmode_8bit_stereo_5000,
+    /// 8-bit stereo, 8000 Hz
     soundmode_8bit_stereo_8000,
+    /// 8-bit stereo, 11025 Hz
     soundmode_8bit_stereo_11025,
+    /// 8-bit stereo, 16000 Hz
     soundmode_8bit_stereo_16000,
+    /// 8-bit stereo, 22050 Hz
     soundmode_8bit_stereo_22050,
+    /// 8-bit stereo, 32000 Hz
     soundmode_8bit_stereo_32000,
+    /// 8-bit stereo, 44100 Hz
     soundmode_8bit_stereo_44100,
+    /// 16-bit stereo, 5000 Hz
     soundmode_16bit_stereo_5000,
+    /// 16-bit stereo, 8000 Hz
     soundmode_16bit_stereo_8000,
+    /// 16-bit stereo, 11025 Hz
     soundmode_16bit_stereo_11025,
+    /// 16-bit stereo, 16000 Hz
     soundmode_16bit_stereo_16000,
+    /// 16-bit stereo, 22050 Hz
     soundmode_16bit_stereo_22050,
+    /// 16-bit stereo, 32000 Hz
     soundmode_16bit_stereo_32000,
+    /// 16-bit stereo, 44100 Hz
     soundmode_16bit_stereo_44100,
 };
 
+/// \brief Sets the application sound mode.
 void setsoundmode( enum soundmode_t mode );
 
+/// \brief The total number of sound channels supported by the engine.
 #define SOUND_CHANNELS 16
 struct sound_t;
+/// \brief Loads a new sound from a file.
 struct sound_t* loadwav( char const* filename );
+/// \brief Creates a new sound from a buffer.
+///
+/// Note that this copies the samples internally,
+/// so there is effectively no dependency with the buffer.
+///
+/// \param channels The number of channels. Only 1 or 2 are supported.
+/// \param samplerate the sample frequency in Hz, between 1000 and 44100
+/// \param framecount the number of frames of the sample data
+/// \param samples pointer to the sample data
 struct sound_t* createsound( int channels, int samplerate, int framecount, short* samples );
+
+/// \brief Plays a sound.
+/// 
+/// \param channel the channel to play the sound on
+/// \param sound the sound to play
+/// \param loop if true, the sound will loop forever
+/// \param volume a number between 0 (silent) and 255 (full volume)
 void playsound( int channel, struct sound_t* sound, int loop, int volume );
+
+/// \brief Stops any sound currently playing in the given channel.
 void stopsound( int channel );
+/// \brief Checks whether any sound is playing in the given channel.
 int soundplaying( int channel );
+/// \brief Sets the stereo volume of a channel.
 void soundvolume( int channel, int left, int right );
 
 
+/// \brief A key code.
 enum keycode_t { 
     KEY_INVALID, KEY_LBUTTON, KEY_RBUTTON, KEY_CANCEL, KEY_MBUTTON, KEY_XBUTTON1, KEY_XBUTTON2, KEY_BACK, KEY_TAB, 
     KEY_CLEAR, KEY_RETURN, KEY_SHIFT, KEY_CONTROL, KEY_MENU, KEY_PAUSE, KEY_CAPITAL, KEY_KANA, KEY_HANGUL = KEY_KANA,
@@ -185,15 +486,33 @@ enum keycode_t {
 };
 
 
+/// \brief Checks whether a key is currently pushed (down).
 int keystate( enum keycode_t key );
 
+/// \brief Key code event modifier indicating that the key was released.
 #define KEY_MODIFIER_RELEASED 0x80000000 
+/// \brief Reads the key press events available.
+///
+/// \return a pointer to an internal memory buffer containing the key events
+/// since the last call to `readkeys`
 enum keycode_t* readkeys( void );
+/// \brief Reads the character input events available
+///
+/// \return a pointer to an internal memory buffer containing
+/// the character input events since the last call to `readchars`
 char const* readchars( void );
 
+/// \brief Gets the absolute mouse position on the X axis.
 int mousex( void );
+/// \brief Gets the absolute mouse position on the Y axis.
 int mousey( void );
+/// \brief Gets the mouse relative position
+/// since the last internal application loop
+/// on the X axis.
 int mouserelx( void );
+/// \brief Gets the mouse relative position
+/// since the last internal application loop
+/// on the X axis.
 int mouserely( void );
 
 #endif /* dos_h */
