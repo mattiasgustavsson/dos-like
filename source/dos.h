@@ -748,7 +748,7 @@ void getpal( int index, int* r, int* g, int* b ) {
     uint32_t c = internals->screen.palette[ index ];
     uint32_t cr = ( c ) & 0xff;
     uint32_t cg = ( c >> 8 ) & 0xff;
-    uint32_t cb = ( c >> 16 ) & 0xf;
+    uint32_t cb = ( c >> 16 ) & 0xff;
     if( r ) {
         *r = cr >> 2;
     }
