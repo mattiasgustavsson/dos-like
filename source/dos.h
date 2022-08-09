@@ -1891,6 +1891,7 @@ struct music_t* loadmid( char const* filename ) {
 struct music_t* loadmus( char const* filename ) {
     load_default_sf2();
     FILE* fp = fopen( filename, "rb" );
+    if( !fp ) return NULL;
     fseek( fp, 0, SEEK_END );
     size_t sz = ftell( fp );
     fseek( fp, 0, SEEK_SET );
@@ -1921,6 +1922,7 @@ struct music_t* createmus( void* data, int size ) {
 struct music_t* loadmod( char const* filename ) {
    
     FILE* fp = fopen( filename, "rb" );
+    if( !fp ) return NULL;
     fseek( fp, 0, SEEK_END );
     size_t sz = ftell( fp );
     fseek( fp, 0, SEEK_SET );
