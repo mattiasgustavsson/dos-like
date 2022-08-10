@@ -21,6 +21,11 @@ While running, you can use F11 to toggle between fullscreen and windowed mode.
 To start in windowed mode, add the flag -w or --window to the commandline when launching.
 
 
+## Python bindings
+
+Kevin Vance have written Python bindings for dos-like, available here: https://github.com/cknave/python-dos-like
+
+
 ## Building
 
 dos-like does not make use of any complicated build systems - a simple command line call to the compiler is
