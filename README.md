@@ -24,6 +24,7 @@ To start in windowed mode, add the flag -w or --window to the commandline when l
 ## Bindings for other languages
 
 Eduardo Pinho have written Rust bindings for dos-like, available here: https://github.com/Enet4/dos-like-rs
+
 Kevin Vance have written Python bindings for dos-like, available here: https://github.com/cknave/python-dos-like
 
 
