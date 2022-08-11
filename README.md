@@ -21,8 +21,9 @@ While running, you can use F11 to toggle between fullscreen and windowed mode.
 To start in windowed mode, add the flag -w or --window to the commandline when launching.
 
 
-## Python bindings
+## Bindings for other languages
 
+Eduardo Pinho have written Rust bindings for dos-like, available here: https://github.com/Enet4/dos-like-rs
 Kevin Vance have written Python bindings for dos-like, available here: https://github.com/cknave/python-dos-like
 
 
