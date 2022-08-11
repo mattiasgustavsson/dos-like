@@ -26,6 +26,8 @@ enum videomode_t {
     videomode_640x350,
     videomode_640x400,
     videomode_640x480,
+
+    force_size_videomode = 0x7ffffff // ensure videomode_t is 32-bit value
 };
 
 void setvideomode( enum videomode_t mode );
@@ -390,8 +392,8 @@ struct internals_t {
         int cellheight;
         bool doublebuffer;
         uint8_t* buffer;
-        uint8_t buffer0[ 640 * 480 ];
-        uint8_t buffer1[ 640 * 480 ];
+        uint8_t buffer0[ 1024 * 1024 ];
+        uint8_t buffer1[ 1024 * 1024 ];
         uint32_t palette[ 256 ];
     } screen;
 
@@ -655,6 +657,26 @@ void setvideomode( enum videomode_t mode ) {
             internals->screen.cellwidth = 1;
             internals->screen.cellheight = 1;
             break;
+        default: {
+            uint32_t custom_mode = (uint32_t)mode;
+            internals->screen.width = ( ( custom_mode & 0xffc00 ) >> 10 ) + 1;
+            internals->screen.height = ( custom_mode & 0x003ff ) + 1;
+            if( custom_mode & 0x100000 ) {
+                if( custom_mode & 0x200000 ) {
+                    internals->screen.font = font9x16;
+                    internals->screen.cellwidth = 9;
+                    internals->screen.cellheight = 16;
+                } else {
+                    internals->screen.font = font8x8;
+                    internals->screen.cellwidth = 8;
+                    internals->screen.cellheight = 8;
+                }
+            } else {
+                internals->screen.font = NULL;
+                internals->screen.cellwidth = 1;
+                internals->screen.cellheight = 1;
+            }
+        }
 
     }
     memset( internals->screen.buffer0, 0, internals->screen.width * internals->screen.height * ( internals->screen.font ? 2 : 1 ) );
