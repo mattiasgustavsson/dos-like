@@ -60,6 +60,15 @@ int frametimer_frame_counter( frametimer_t* frametimer );
     #ifndef __TINYC__
         #pragma comment(lib, "winmm.lib")
     #endif
+    #if defined( __TINYC__ )
+        typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTIMECAPS, NEAR *NPTIMECAPS, FAR *LPTIMECAPS;
+        typedef UINT MMRESULT;
+        #define TIMERR_NOERROR (0)
+        static MMRESULT (*timeGetDevCaps)( LPTIMECAPS ptc, UINT cbtc );
+        static MMRESULT (*timeBeginPeriod)( UINT uPeriod );
+        static MMRESULT (*timeEndPeriod)( UINT uPeriod );
+    #endif
+
 #elif defined( __APPLE__ )
 	#include <mach/mach_time.h> 	
 #else
@@ -99,6 +108,15 @@ struct frametimer_t
 
 frametimer_t* frametimer_create( void* memctx )
 	{
+    #if defined( __TINYC__ )
+        if( !timeGetDevCaps) {
+            HMODULE winmm = LoadLibrary( "winmm" );
+            timeGetDevCaps = GetProcAddress( winmm, "timeGetDevCaps");
+            timeBeginPeriod = GetProcAddress( winmm, "timeBeginPeriod");
+            timeEndPeriod = GetProcAddress( winmm, "timeEndPeriod");
+        }
+    #endif
+
 	frametimer_t* frametimer = (frametimer_t*) FRAMETIMER_MALLOC( memctx, sizeof( frametimer_t ) );
 	#ifdef _WIN32
     	TIMECAPS tc;

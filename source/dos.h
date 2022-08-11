@@ -260,27 +260,10 @@ bool app_has_focus( app_t* app );
 
 #include "libs/awe32rom.h"
 #include "libs/crtframe.h"
-
-#ifndef __wasm__
 #include "libs/thread.h"
-#else
-#define WA_CORO_IMPLEMENT_NANOSLEEP
-#include <wajic_coro.h>
-// dummy replacement for thread.h on WASM
-typedef char thread_mutex_t;
-#define thread_mutex_init(mutex)
-#define thread_mutex_term(mutex)
-#define thread_mutex_lock(mutex)
-#define thread_mutex_unlock(mutex)
-typedef char thread_signal_t;
-#define thread_signal_init(signal)
-#define thread_signal_term(signal)
-#define thread_signal_raise(signal)
-#define thread_signal_wait(signal, timeout) 1
-typedef int thread_atomic_int_t;
-#define thread_atomic_int_store(atomic, desired) *(atomic) = (desired)
-#define thread_atomic_int_load(atomic) (*(atomic))
-#define thread_atomic_int_inc(atomic) ((*(atomic))++)
+#ifdef __wasm__
+    #define WA_CORO_IMPLEMENT_NANOSLEEP
+    #include <wajic_coro.h>
 #endif
 
 static uint32_t default_palette[ 256 ] = {
@@ -1766,7 +1749,7 @@ int installusersoundbank( char const* filename ) {
 }
 
 
-static void load_default_sf2() {
+static void load_default_sf2( void ) {
     // Delay loading of built-in soundfont until first used
     // This also allows the linker to not include the entire large sf2 file if this function is not used
     if (!internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2) {
@@ -3153,8 +3136,8 @@ static int app_proc( app_t* app, void* user_data ) {
         memset( keys, 0, sizeof( keys ) );
         int chars_index = 0;
         memset( chars, 0, sizeof( chars ) );
-        int relx = 0;
-        int rely = 0;
+        float relx = 0;
+        float rely = 0;
         app_input_t input = app_input( app );
         for( int i = 0; i < input.count; ++i ) {
             app_input_event_t* event = &input.events[ i ];
@@ -3200,8 +3183,8 @@ static int app_proc( app_t* app, void* user_data ) {
                 rely += event->data.mouse_delta.y;
             }
         }
-        internals->input.mouse_relx = relx;
-        internals->input.mouse_rely = rely;
+        internals->input.mouse_relx = (int)relx;
+        internals->input.mouse_rely = (int)rely;
 
         // Check if the close button on the window was clicked (or Alt+F4 was pressed)
         if( app_state == APP_STATE_EXIT_REQUESTED ) {
@@ -3438,6 +3421,7 @@ static int app_proc( app_t* app, void* user_data ) {
             int chr_width = *data++;
             int chr_height = *data++;
             int chr_baseline = *data++;
+            (void) chr_baseline;
             int chr_mod = 256 / chr_width;
 	        for( int y = 0; y < height; ++y ) { 
 	            for( int x = 0; x < width; ++x ) { 
@@ -3567,16 +3551,6 @@ static int app_proc( app_t* app, void* user_data ) {
 #define DRWAV_FREE( p ) wav_custom_free( p );
 #include "libs/dr_wav.h"
 
-#if defined( __TINYC__ )
-
-typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTIMECAPS, NEAR *NPTIMECAPS, FAR *LPTIMECAPS;
-    typedef UINT MMRESULT;
-    #define TIMERR_NOERROR (0)
-    static MMRESULT (*timeGetDevCaps)( LPTIMECAPS ptc, UINT cbtc );
-    static MMRESULT (*timeBeginPeriod)( UINT uPeriod );
-    static MMRESULT (*timeEndPeriod)( UINT uPeriod );
-#endif
-
 #define FRAMETIMER_IMPLEMENTATION
 #include "libs/frametimer.h"
 
@@ -3612,18 +3586,8 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #define PIXELFONT_BUILDER_IMPLEMENTATION
 #include "libs/pixelfont.h"
 
-#if defined( __TINYC__ )
-    typedef struct _RTL_CONDITION_VARIABLE { PVOID Ptr; } RTL_CONDITION_VARIABLE, *PRTL_CONDITION_VARIABLE;      
-    typedef RTL_CONDITION_VARIABLE CONDITION_VARIABLE, *PCONDITION_VARIABLE;
-    static VOID (*InitializeConditionVariable)( PCONDITION_VARIABLE ConditionVariable );
-    static VOID (*WakeConditionVariable)( PCONDITION_VARIABLE ConditionVariable );
-    static BOOL (*SleepConditionVariableCS)( PCONDITION_VARIABLE ConditionVariable, PCRITICAL_SECTION CriticalSection, DWORD dwMilliseconds );
-#endif
-
-#ifndef __wasm__
 #define THREAD_IMPLEMENTATION
 #include "libs/thread.h"
-#endif
 
 #define TSF_IMPLEMENTATION
 #define TSF_POW     pow
@@ -3690,18 +3654,6 @@ int main( int argc, char** argv ) {
     //bin2arr( "framecol.gif", "crtframecol.h", "crtframecol" );
     //bin2arr( "framealpha.gif", "crtframealpha.h", "crtframealpha" );
     //bin2arr( "aweromgm.sf2", "awe32rom.h", "awe32rom" );
-
-    #if defined( __TINYC__ )
-        HMODULE kernel = LoadLibrary( "kernel32" );
-        InitializeConditionVariable = GetProcAddress( kernel, "InitializeConditionVariable");
-        WakeConditionVariable = GetProcAddress( kernel, "WakeConditionVariable");
-        SleepConditionVariableCS = GetProcAddress( kernel, "SleepConditionVariableCS");
-
-        HMODULE winmm = LoadLibrary( "winmm" );
-        timeGetDevCaps = GetProcAddress( winmm, "timeGetDevCaps");
-        timeBeginPeriod = GetProcAddress( winmm, "timeBeginPeriod");
-        timeEndPeriod = GetProcAddress( winmm, "timeEndPeriod");
-    #endif
 
     struct app_context_t app_context;
     app_context.argc = argc;
