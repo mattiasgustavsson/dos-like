@@ -3630,10 +3630,14 @@ static int app_proc( app_t* app, void* user_data ) {
 
 
 bool app_has_focus( app_t* app ) {
-    #ifndef NULL_PLATFORM
-        return app->has_focus;
-    #else
+    #ifdef ALWAYS_UPDATE
         return true;
+    #else
+        #ifndef NULL_PLATFORM
+            return app->has_focus;
+        #else
+            return true;
+        #endif
     #endif
 }
 
