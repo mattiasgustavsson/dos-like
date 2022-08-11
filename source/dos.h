@@ -3078,11 +3078,15 @@ static int app_proc( app_t* app, void* user_data ) {
     internals->wasm.user_coro = user_coro; // only now internals exists
     #endif
 
-    crtemu_pc_t* crt = crtemu_pc_create( NULL );
-    #ifndef DISABLE_SCREEN_FRAME
-        APP_U32* frame = load_crt_frame();
-        crtemu_pc_frame( crt, frame, 1024, 1024 );
-        free( frame );
+    #ifdef NULL_PLATFORM
+        crtemu_pc_t* crt = NULL;
+    #else
+        crtemu_pc_t* crt = crtemu_pc_create( NULL );
+        #ifndef DISABLE_SCREEN_FRAME
+            APP_U32* frame = load_crt_frame();
+            crtemu_pc_frame( crt, frame, 1024, 1024 );
+            free( frame );
+        #endif
     #endif
 
     // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
@@ -3227,8 +3231,10 @@ static int app_proc( app_t* app, void* user_data ) {
 
         int mouse_x = app_pointer_x( app );
         int mouse_y = app_pointer_y( app );
-        crtemu_pc_coordinates_window_to_bitmap( crt, width * internals->screen.cellwidth, 
-            height * internals->screen.cellheight, &mouse_x, &mouse_y );
+        if( crt ) {
+            crtemu_pc_coordinates_window_to_bitmap( crt, width * internals->screen.cellwidth, 
+                height * internals->screen.cellheight, &mouse_x, &mouse_y );
+        }
         internals->input.mouse_x = mouse_x / internals->screen.cellwidth;
         internals->input.mouse_y = mouse_y / internals->screen.cellheight;
 
@@ -3479,14 +3485,17 @@ static int app_proc( app_t* app, void* user_data ) {
             continue;
         }
         APP_U64 time = app_time_count( app );
-        APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
+        APP_U64 freq = app_time_freq( app );
+        APP_U64 delta_time_us = ( time - prev_time ) / ( ( freq > 1000000 ? freq / 1000000 : 1 ) );
         prev_time = time;
         crt_time_us += delta_time_us;
-        #ifndef DISABLE_SCREEN_FRAME
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
-        #else
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff000000 );
-        #endif
+        if( crt ) {
+            #ifndef DISABLE_SCREEN_FRAME
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
+            #else
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff000000 );
+            #endif
+        }
         app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
     }
 
@@ -3506,7 +3515,9 @@ static int app_proc( app_t* app, void* user_data ) {
             crt_time_us += delta_time_us;
             int v = ( ( 60 - i ) * 255 ) / 60;
             uint32_t fade = ( v << 16 ) | v << 8 | v;
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, fade, 0xff1a1a1a );
+            if( crt ) {
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, fade, 0xff1a1a1a );
+            }
             app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
             frametimer_update( frametimer );
         }
@@ -3521,8 +3532,9 @@ static int app_proc( app_t* app, void* user_data ) {
     frametimer_destroy( frametimer );
     opl_destroy( sound_context.opl );
     thread_mutex_term( &sound_context.mutex );
-    crtemu_pc_destroy( crt );
-
+    if( crt ) {
+        crtemu_pc_destroy( crt );
+    }
     #ifndef __wasm__
     return thread_join( user_thread );
     #else
@@ -3532,9 +3544,11 @@ static int app_proc( app_t* app, void* user_data ) {
 
 
 #define APP_IMPLEMENTATION
-#ifdef _WIN32 
+#ifdef NULL_PLATFORM
+    #define APP_NULL
+#elif defined( _WIN32 )
     #define APP_WINDOWS
-#elif __wasm__
+#elif defined( __wasm__ )
     #define APP_WASM
 #else 
     #define APP_SDL
@@ -3616,7 +3630,11 @@ static int app_proc( app_t* app, void* user_data ) {
 
 
 bool app_has_focus( app_t* app ) {
-    return app->has_focus;
+    #ifndef NULL_PLATFORM
+        return app->has_focus;
+    #else
+        return true;
+    #endif
 }
 
 
