@@ -1,8 +1,18 @@
 ![build](https://github.com/mattiasgustavsson/dos-like/workflows/build/badge.svg)
 
-# dos-like
+# dos-like (disable crt border mod)
 
 ![dos-like examples](dos-like.jpg)
+
+------------------------------------------------------------------------------------------
+DOMENICO MUTI NOTES: the only modification I made on Matias' project is the ability to disable the CRT border, the screen curvature and the black borders, while keeping the CRT filter on.
+
+To disable it: uncomment on top of dos.h
+```
+#define DISABLE_SCREEN_FRAME
+#define DISABLE_CRT_CURVE
+```
+------------------------------------------------------------------------------------------
 
 dos-like is a programming library/framework, kind of like a tiny game engine, for writing games and programs
 with a similar feel to MS-DOS productions from the early 90s. But rather than writing code that would run on
