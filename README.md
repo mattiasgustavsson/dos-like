@@ -7,7 +7,7 @@
 ------------------------------------------------------------------------------------------
 DOMENICO MUTI NOTES: the only modification I made on Matias' project is the ability to disable the CRT border, the screen curvature and the black borders, while keeping the CRT filter on.
 
-To disable it: uncomment on top of dos.h
+To disable it: add on top of dos.h
 ```
 #define DISABLE_SCREEN_FRAME
 #define DISABLE_CRT_CURVE
