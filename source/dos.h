@@ -54,6 +54,7 @@ void curson( void );
 void cursoff( void );
 
 unsigned char* loadgif( char const* filename, int* width, int* height, int* palcount, unsigned char palette[ 768 ] );
+unsigned char* loadgif_memory( char const* data, int data_length, int* width, int* height, int* palcount, unsigned char palette[ 768 ] );
 
 void blit( int x, int y, unsigned char* source, int width, int height, int srcx, int srcy, int srcw, int srch );
 void maskblit( int x, int y, unsigned char* source, int width, int height, int srcx, int srcy, int srcw, int srch, 
@@ -1059,20 +1060,10 @@ static void load_gif_frame( void* data, struct GIF_WHDR* whdr ) {
 }
 
 
-unsigned char* loadgif( char const* filename, int* width, int* height, int* palcount, unsigned char palette[ 768 ] ) {
-    FILE* fp = fopen( filename, "rb" );
-    if( !fp ) return NULL;
-    fseek( fp, 0, SEEK_END );
-    size_t sz = ftell( fp );
-    fseek( fp, 0, SEEK_SET );
-    uint8_t* data = (uint8_t*) malloc( sz );
-    fread( data, 1, sz, fp );
-    fclose( fp );
-
+unsigned char* loadgif_memory( char const* data, int data_length, int* width, int* height, int* palcount, unsigned char palette[ 768 ] ) {
     struct gif_load_context_t context;
     memset( &context, 0, sizeof( context ) );
-    GIF_Load( data, (long)sz, load_gif_frame, NULL, &context, 0 );
-    free( data );
+    GIF_Load( (char*)data, (long)data_length, load_gif_frame, NULL, &context, 0 );
 
     if( width ) {
         *width = context.width;
@@ -1092,6 +1083,21 @@ unsigned char* loadgif( char const* filename, int* width, int* height, int* palc
         }
     }
     return context.pixels;
+}
+
+unsigned char* loadgif( char const* filename, int* width, int* height, int* palcount, unsigned char palette[ 768 ] ) {
+    FILE* fp = fopen( filename, "rb" );
+    if( !fp ) return NULL;
+    fseek( fp, 0, SEEK_END );
+    size_t sz = ftell( fp );
+    fseek( fp, 0, SEEK_SET );
+    uint8_t* data = (uint8_t*) malloc( sz );
+    fread( data, 1, sz, fp );
+    fclose( fp );
+
+    unsigned char* pixels = loadgif_memory(data, (int)sz, width, height, palcount, palette);
+    free(data);
+    return pixels;
 }
 
 
