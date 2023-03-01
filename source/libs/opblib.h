@@ -67,18 +67,34 @@ I place all my changes under the same license as the original code (see below).
 
     const char* OPB_GetFormatName(OPB_Format fmt);
 
-    // must return elementCount if successful
+    // Custom write handler of the same form as stdio.h's fwrite for writing to memory
+    // This function should write elementSize * elementCount bytes from buffer to the user-defined context object
+    // Must return elementCount if successful
     typedef size_t(*OPB_StreamWriter)(const void* buffer, size_t elementSize, size_t elementCount, void* context);
 
-    // must return 0 if successful
+    // Custom seek handler of the same form as stdio.h's fseek for writing to memory
+    // This function should change the position to write to in the user-defined context object by the number of bytes
+    // Specified by offset, relative to the specified origin which is one of 3 values:
+    //
+    // 1. Beginning of file (same as fseek's SEEK_SET)
+    // 2. Current position of the file pointer (same as fseek's SEEK_CUR)
+    // 3. End of file (same as fseek's SEEK_END)
+    //
+    // Must return 0 if successful
     typedef int (*OPB_StreamSeeker)(void* context, long offset, int origin);
     
-    // must return -1L is unsuccessful
+    // Custom tell handler of the same form as stdio.h's ftell for writing to memory
+    // This function must return the current write position for the user-defined context object
+    // Must return -1L if unsuccessful
     typedef long (*OPB_StreamTeller)(void* context);
 
-    // should return number of elements read
+    // Custom read handler of the same form as stdio.h's fread for reading from memory
+    // This function should read elementSize * elementCount bytes from the user-defined context object to buffer
+    // Should return number of elements read
     typedef size_t(*OPB_StreamReader)(void* buffer, size_t elementSize, size_t elementCount, void* context);
 
+    // Function that receives OPB_Command items read by OPB_BinaryToOpl and OPB_FileToOpl
+    // This is where you copy the OPB_Command items into a data structure or the user-defined context object
     // Should return 0 if successful. Note that the array for `commandStream` is stack allocated and must be copied!
     typedef int(*OPB_BufferReceiver)(OPB_Command* commandStream, size_t commandCount, void* context);
 
@@ -167,6 +183,7 @@ static void Vector_Free(Vector* v) {
     if (v->Storage != NULL) {
         free(v->Storage);
     }
+    v->Storage = NULL;
     v->Capacity = 0;
     v->Count = 0;
 }
@@ -326,11 +343,11 @@ struct Context {
 };
 
 static void Context_Free(Context* context) {
-    Vector_Free(&context->CommandStream);
-    Vector_Free(&context->Instruments);
-    Vector_Free(&context->DataMap);
+    if (context->CommandStream.Storage != NULL) { Vector_Free(&context->CommandStream); }
+    if (context->Instruments.Storage != NULL) { Vector_Free(&context->Instruments); }
+    if (context->DataMap.Storage != NULL) { Vector_Free(&context->DataMap); }
     for (int i = 0; i < NUM_TRACKS; i++) {
-        Vector_Free(context->Tracks + i);
+        if (context->Tracks[i].Storage != NULL) { Vector_Free(&context->Tracks[i]); }
     }
 }
 
@@ -438,7 +455,7 @@ static void OpbData_WriteUint7(OpbData* data, uint32_t value) {
         uint8_t b0 = (value & 0b01111111) | 0b10000000;
         uint8_t b1 = ((value & 0b011111110000000) >> 7) | 0b10000000;
         uint8_t b2 = ((value & 0b0111111100000000000000) >> 14) | 0b10000000;
-        uint8_t b3 = ((value & 0b11111111000000000000000000000) >> 21);
+        uint8_t b3 = (value & 0b11111111000000000000000000000) >> 21;
         data->Args[data->Count] = b0; data->Count++;
         data->Args[data->Count] = b1; data->Count++;
         data->Args[data->Count] = b2; data->Count++;
@@ -633,7 +650,7 @@ static int WriteUint7(Context* context, uint32_t value) {
         uint8_t b0 = (value & 0b01111111) | 0b10000000;
         uint8_t b1 = ((value & 0b011111110000000) >> 7) | 0b10000000;
         uint8_t b2 = ((value & 0b0111111100000000000000) >> 14) | 0b10000000;
-        uint8_t b3 = ((value & 0b11111111000000000000000000000) >> 21);
+        uint8_t b3 = (value & 0b11111111000000000000000000000) >> 21;
         if (context->Write(&b0, sizeof(uint8_t), 1, context->UserData) < 1) return -1;
         if (context->Write(&b1, sizeof(uint8_t), 1, context->UserData) < 1) return -1;
         if (context->Write(&b2, sizeof(uint8_t), 1, context->UserData) < 1) return -1;
@@ -963,7 +980,6 @@ static int ProcessTrack(Context* context, int channel, Vector* chOut) {
         return 0;
     }
 
-    int lastIndex = 0;
     int lastOrder = Vector_GetT(Command, commands, 0)->OrderIndex;
     int i = 0;
 
@@ -1134,41 +1150,43 @@ static int ConvertToOpb(Context* context) {
     }
 
     // write chunks
-    int chunks = 0;
-    double lastTime = 0;
-    int i = 0;
+    {
+        int chunks = 0;
+        double lastTime = 0;
+        int i = 0;
 
-    Log("Writing chunks\n");
-    while (i < context->CommandStream.Count) {
-        double chunkTime = Vector_GetT(Command, &context->CommandStream, i)->Time;
+        Log("Writing chunks\n");
+        while (i < context->CommandStream.Count) {
+            double chunkTime = Vector_GetT(Command, &context->CommandStream, i)->Time;
 
-        int start = i;
-        while (i < context->CommandStream.Count && Vector_GetT(Command, &context->CommandStream, i)->Time <= chunkTime) {
-            i++;
+            int start = i;
+            while (i < context->CommandStream.Count && Vector_GetT(Command, &context->CommandStream, i)->Time <= chunkTime) {
+                i++;
+            }
+            int end = i;
+
+            int ret = WriteChunk(context, chunkTime - lastTime, start, end - start);
+            if (ret) return ret;
+            chunks++;
+
+            lastTime = chunkTime;
         }
-        int end = i;
 
-        int ret = WriteChunk(context, chunkTime - lastTime, start, end - start);
-        if (ret) return ret;
-        chunks++;
+        // write header
+        Log("Writing header\n");
 
-        lastTime = chunkTime;
+        long fpos;
+        TELL(context, fpos);
+
+        uint32_t length = FlipEndian32(fpos);
+        uint32_t instrCount = FlipEndian32((uint32_t)context->Instruments.Count);
+        uint32_t chunkCount = FlipEndian32(chunks);
+
+        SEEK(context, OPB_HEADER_SIZE + 1, SEEK_SET);
+        WRITE(&length, sizeof(uint32_t), 1, context);
+        WRITE(&instrCount, sizeof(uint32_t), 1, context);
+        WRITE(&chunkCount, sizeof(uint32_t), 1, context);
     }
-
-    // write header
-    Log("Writing header\n");
-
-    long fpos;
-    TELL(context, fpos);
-
-    uint32_t length = FlipEndian32(fpos);
-    uint32_t instrCount = FlipEndian32((uint32_t)context->Instruments.Count);
-    uint32_t chunkCount = FlipEndian32(chunks);
-
-    SEEK(context, OPB_HEADER_SIZE + 1, SEEK_SET);
-    WRITE(&length, sizeof(uint32_t), 1, context);
-    WRITE(&instrCount, sizeof(uint32_t), 1, context);
-    WRITE(&chunkCount, sizeof(uint32_t), 1, context);
 
     return 0;
 }
@@ -1327,15 +1345,15 @@ static int ReadCommand(Context* context, OPB_Command* buffer, int* bufferIndex, 
                 return OPBERR_LOGGED;
             }
 
-            int mask = channelMask[1];
-            bool modChr = (mask & 0b00000001) != 0;
-            bool modAtk = (mask & 0b00000010) != 0;
-            bool modSus = (mask & 0b00000100) != 0;
-            bool modWav = (mask & 0b00001000) != 0;
-            bool carChr = (mask & 0b00010000) != 0;
-            bool carAtk = (mask & 0b00100000) != 0;
-            bool carSus = (mask & 0b01000000) != 0;
-            bool carWav = (mask & 0b10000000) != 0;
+            int chmask = channelMask[1];
+            bool modChr = (chmask & 0b00000001) != 0;
+            bool modAtk = (chmask & 0b00000010) != 0;
+            bool modSus = (chmask & 0b00000100) != 0;
+            bool modWav = (chmask & 0b00001000) != 0;
+            bool carChr = (chmask & 0b00010000) != 0;
+            bool carAtk = (chmask & 0b00100000) != 0;
+            bool carSus = (chmask & 0b01000000) != 0;
+            bool carWav = (chmask & 0b10000000) != 0;
 
             uint8_t freq = 0, note = 0;
             bool isPlay = baseAddr == OPB_CMD_PLAYINSTRUMENT;
@@ -1556,7 +1574,8 @@ int OPB_FileToOpl(const char* file, OPB_BufferReceiver receiver, void* receiverD
 }
 
 int OPB_BinaryToOpl(OPB_StreamReader reader, void* readerData, OPB_BufferReceiver receiver, void* receiverData) {
-    Context context = Context_New();
+    Context context;
+    memset(&context, 0, sizeof(Context));
 
     context.Read = reader;
     context.Submit = receiver;
