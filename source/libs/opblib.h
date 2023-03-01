@@ -1019,7 +1019,7 @@ static int ProcessTrack(Context* context, int channel, Vector* chOut) {
 }
 
 static int WriteChunk(Context* context, double elapsed, int start, int count) {
-    uint32_t elapsedMs = (uint32_t)(elapsed * 1000);
+    uint32_t elapsedMs = (uint32_t)((elapsed * 1000) + 0.5);
     int loCount = 0;
     int hiCount = 0;
 
