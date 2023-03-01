@@ -567,8 +567,7 @@ Instrument MakeInstrument(int16_t FeedConn, Operator Modulator, Operator Carrier
 }
 
 static Context Context_New(void) {
-    Context context;
-    memset(&context, 0, sizeof(Context));
+    Context context = { 0 };
 
     context.CommandStream = Vector_New(sizeof(Command));
     context.Instruments = Vector_New(sizeof(Instrument));
@@ -1574,8 +1573,7 @@ int OPB_FileToOpl(const char* file, OPB_BufferReceiver receiver, void* receiverD
 }
 
 int OPB_BinaryToOpl(OPB_StreamReader reader, void* readerData, OPB_BufferReceiver receiver, void* receiverData) {
-    Context context;
-    memset(&context, 0, sizeof(Context));
+    Context context = { 0 };
 
     context.Read = reader;
     context.Submit = receiver;
