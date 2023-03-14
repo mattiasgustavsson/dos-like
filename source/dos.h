@@ -26,6 +26,8 @@ enum videomode_t {
     videomode_640x350,
     videomode_640x400,
     videomode_640x480,
+
+    force_size_videomode = 0x7ffffff // ensure videomode_t is 32-bit value
 };
 
 void setvideomode( enum videomode_t mode );
@@ -181,12 +183,16 @@ enum keycode_t {
     KEY_OEM_1, KEY_OEM_PLUS, KEY_OEM_COMMA, KEY_OEM_MINUS, KEY_OEM_PERIOD, KEY_OEM_2, KEY_OEM_3, KEY_OEM_4, KEY_OEM_5, 
     KEY_OEM_6, KEY_OEM_7, KEY_OEM_8, KEY_OEM_102, KEY_PROCESSKEY, KEY_ATTN, KEY_CRSEL, KEY_EXSEL, KEY_EREOF, KEY_PLAY, 
     KEY_ZOOM, KEY_NONAME, KEY_PA1, KEY_OEM_CLEAR, 
-    KEYCOUNT 
+    KEYCOUNT, KEYPADDING = 0xFFFFFFFF 
 };
 
+
 int keystate( enum keycode_t key );
+
+#define KEY_MODIFIER_RELEASED 0x80000000 
 enum keycode_t* readkeys( void );
 char const* readchars( void );
+
 int mousex( void );
 int mousey( void );
 int mouserelx( void );
@@ -256,27 +262,10 @@ bool app_has_focus( app_t* app );
 
 #include "libs/awe32rom.h"
 #include "libs/crtframe.h"
-
-#ifndef __wasm__
 #include "libs/thread.h"
-#else
-#define WA_CORO_IMPLEMENT_NANOSLEEP
-#include <wajic_coro.h>
-// dummy replacement for thread.h on WASM
-typedef char thread_mutex_t;
-#define thread_mutex_init(mutex)
-#define thread_mutex_term(mutex)
-#define thread_mutex_lock(mutex)
-#define thread_mutex_unlock(mutex)
-typedef char thread_signal_t;
-#define thread_signal_init(signal)
-#define thread_signal_term(signal)
-#define thread_signal_raise(signal)
-#define thread_signal_wait(signal, timeout) 1
-typedef int thread_atomic_int_t;
-#define thread_atomic_int_store(atomic, desired) *(atomic) = (desired)
-#define thread_atomic_int_load(atomic) (*(atomic))
-#define thread_atomic_int_inc(atomic) ((*(atomic))++)
+#ifdef __wasm__
+    #define WA_CORO_IMPLEMENT_NANOSLEEP
+    #include <wajic_coro.h>
 #endif
 
 static uint32_t default_palette[ 256 ] = {
@@ -403,8 +392,8 @@ struct internals_t {
         int cellheight;
         bool doublebuffer;
         uint8_t* buffer;
-        uint8_t buffer0[ 640 * 480 ];
-        uint8_t buffer1[ 640 * 480 ];
+        uint8_t buffer0[ 1024 * 1024 ];
+        uint8_t buffer1[ 1024 * 1024 ];
         uint32_t palette[ 256 ];
     } screen;
 
@@ -668,6 +657,26 @@ void setvideomode( enum videomode_t mode ) {
             internals->screen.cellwidth = 1;
             internals->screen.cellheight = 1;
             break;
+        default: {
+            uint32_t custom_mode = (uint32_t)mode;
+            internals->screen.width = ( ( custom_mode & 0xffc00 ) >> 10 ) + 1;
+            internals->screen.height = ( custom_mode & 0x003ff ) + 1;
+            if( custom_mode & 0x100000 ) {
+                if( custom_mode & 0x200000 ) {
+                    internals->screen.font = font9x16;
+                    internals->screen.cellwidth = 9;
+                    internals->screen.cellheight = 16;
+                } else {
+                    internals->screen.font = font8x8;
+                    internals->screen.cellwidth = 8;
+                    internals->screen.cellheight = 8;
+                }
+            } else {
+                internals->screen.font = NULL;
+                internals->screen.cellwidth = 1;
+                internals->screen.cellheight = 1;
+            }
+        }
 
     }
     memset( internals->screen.buffer0, 0, internals->screen.width * internals->screen.height * ( internals->screen.font ? 2 : 1 ) );
@@ -744,7 +753,7 @@ void getpal( int index, int* r, int* g, int* b ) {
     uint32_t c = internals->screen.palette[ index ];
     uint32_t cr = ( c ) & 0xff;
     uint32_t cg = ( c >> 8 ) & 0xff;
-    uint32_t cb = ( c >> 16 ) & 0xf;
+    uint32_t cb = ( c >> 16 ) & 0xff;
     if( r ) {
         *r = cr >> 2;
     }
@@ -1762,7 +1771,7 @@ int installusersoundbank( char const* filename ) {
 }
 
 
-static void load_default_sf2() {
+static void load_default_sf2( void ) {
     // Delay loading of built-in soundfont until first used
     // This also allows the linker to not include the entire large sf2 file if this function is not used
     if (!internals->audio.soundbanks[ DEFAULT_SOUNDBANK_AWE32 ].sf2) {
@@ -1887,6 +1896,7 @@ struct music_t* loadmid( char const* filename ) {
 struct music_t* loadmus( char const* filename ) {
     load_default_sf2();
     FILE* fp = fopen( filename, "rb" );
+    if( !fp ) return NULL;
     fseek( fp, 0, SEEK_END );
     size_t sz = ftell( fp );
     fseek( fp, 0, SEEK_SET );
@@ -1917,6 +1927,7 @@ struct music_t* createmus( void* data, int size ) {
 struct music_t* loadmod( char const* filename ) {
    
     FILE* fp = fopen( filename, "rb" );
+    if( !fp ) return NULL;
     fseek( fp, 0, SEEK_END );
     size_t sz = ftell( fp );
     fseek( fp, 0, SEEK_SET );
@@ -3089,11 +3100,15 @@ static int app_proc( app_t* app, void* user_data ) {
     internals->wasm.user_coro = user_coro; // only now internals exists
     #endif
 
-    crtemu_pc_t* crt = crtemu_pc_create( NULL );
-    #ifndef DISABLE_SCREEN_FRAME
-        APP_U32* frame = load_crt_frame();
-        crtemu_pc_frame( crt, frame, 1024, 1024 );
-        free( frame );
+    #ifdef NULL_PLATFORM
+        crtemu_pc_t* crt = NULL;
+    #else
+        crtemu_pc_t* crt = crtemu_pc_create( NULL );
+        #ifndef DISABLE_SCREEN_FRAME
+            APP_U32* frame = load_crt_frame();
+            crtemu_pc_frame( crt, frame, 1024, 1024 );
+            free( frame );
+        #endif
     #endif
 
     // Create the frametimer instance, and set it to fixed 60hz update. This will ensure we never run faster than that,
@@ -3147,8 +3162,8 @@ static int app_proc( app_t* app, void* user_data ) {
         memset( keys, 0, sizeof( keys ) );
         int chars_index = 0;
         memset( chars, 0, sizeof( chars ) );
-        int relx = 0;
-        int rely = 0;
+        float relx = 0;
+        float rely = 0;
         app_input_t input = app_input( app );
         for( int i = 0; i < input.count; ++i ) {
             app_input_event_t* event = &input.events[ i ];
@@ -3179,6 +3194,9 @@ static int app_proc( app_t* app, void* user_data ) {
                 int index = (int)event->data.key;
                 if( index >= 0 && index < KEYCOUNT ) {
                     keystate[ index ] = false;
+                    if( keys_index < 255 ) {
+                        keys[ keys_index++ ] = (enum keycode_t)( ( (uint32_t)event->data.key ) | KEY_MODIFIER_RELEASED );
+                    }
                 }
             } else if( event->type  == APP_INPUT_CHAR ) {
                 if( event->data.char_code > 0 ) {
@@ -3191,8 +3209,8 @@ static int app_proc( app_t* app, void* user_data ) {
                 rely += event->data.mouse_delta.y;
             }
         }
-        internals->input.mouse_relx = relx;
-        internals->input.mouse_rely = rely;
+        internals->input.mouse_relx = (int)relx;
+        internals->input.mouse_rely = (int)rely;
 
         // Check if the close button on the window was clicked (or Alt+F4 was pressed)
         if( app_state == APP_STATE_EXIT_REQUESTED ) {
@@ -3235,8 +3253,10 @@ static int app_proc( app_t* app, void* user_data ) {
 
         int mouse_x = app_pointer_x( app );
         int mouse_y = app_pointer_y( app );
-        crtemu_pc_coordinates_window_to_bitmap( crt, width * internals->screen.cellwidth, 
-            height * internals->screen.cellheight, &mouse_x, &mouse_y );
+        if( crt ) {
+            crtemu_pc_coordinates_window_to_bitmap( crt, width * internals->screen.cellwidth, 
+                height * internals->screen.cellheight, &mouse_x, &mouse_y );
+        }
         internals->input.mouse_x = mouse_x / internals->screen.cellwidth;
         internals->input.mouse_y = mouse_y / internals->screen.cellheight;
 
@@ -3429,6 +3449,7 @@ static int app_proc( app_t* app, void* user_data ) {
             int chr_width = *data++;
             int chr_height = *data++;
             int chr_baseline = *data++;
+            (void) chr_baseline;
             int chr_mod = 256 / chr_width;
 	        for( int y = 0; y < height; ++y ) { 
 	            for( int x = 0; x < width; ++x ) { 
@@ -3486,14 +3507,17 @@ static int app_proc( app_t* app, void* user_data ) {
             continue;
         }
         APP_U64 time = app_time_count( app );
-        APP_U64 delta_time_us = ( time - prev_time ) / ( app_time_freq( app ) / 1000000 );
+        APP_U64 freq = app_time_freq( app );
+        APP_U64 delta_time_us = ( time - prev_time ) / ( ( freq > 1000000 ? freq / 1000000 : 1 ) );
         prev_time = time;
         crt_time_us += delta_time_us;
-        #ifndef DISABLE_SCREEN_FRAME
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
-        #else
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff000000 );
-        #endif
+        if( crt ) {
+            #ifndef DISABLE_SCREEN_FRAME
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff1a1a1a );
+            #else
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, 0xffffff, 0xff000000 );
+            #endif
+        }
         app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
     }
 
@@ -3513,7 +3537,9 @@ static int app_proc( app_t* app, void* user_data ) {
             crt_time_us += delta_time_us;
             int v = ( ( 60 - i ) * 255 ) / 60;
             uint32_t fade = ( v << 16 ) | v << 8 | v;
-            crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, fade, 0xff1a1a1a );
+            if( crt ) {
+                crtemu_pc_present( crt, crt_time_us, screen_xbgr, width, height, fade, 0xff1a1a1a );
+            }
             app_present( app, NULL, 1, 1, 0xffffff, 0xff1a1a1a );
             frametimer_update( frametimer );
         }
@@ -3528,8 +3554,9 @@ static int app_proc( app_t* app, void* user_data ) {
     frametimer_destroy( frametimer );
     opl_destroy( sound_context.opl );
     thread_mutex_term( &sound_context.mutex );
-    crtemu_pc_destroy( crt );
-
+    if( crt ) {
+        crtemu_pc_destroy( crt );
+    }
     #ifndef __wasm__
     return thread_join( user_thread );
     #else
@@ -3539,9 +3566,11 @@ static int app_proc( app_t* app, void* user_data ) {
 
 
 #define APP_IMPLEMENTATION
-#ifdef _WIN32 
+#ifdef NULL_PLATFORM
+    #define APP_NULL
+#elif defined( _WIN32 )
     #define APP_WINDOWS
-#elif __wasm__
+#elif defined( __wasm__ )
     #define APP_WASM
 #else 
     #define APP_SDL
@@ -3557,16 +3586,6 @@ static int app_proc( app_t* app, void* user_data ) {
 #define DRWAV_REALLOC( p, sz ) wav_custom_realloc( p, sz )
 #define DRWAV_FREE( p ) wav_custom_free( p );
 #include "libs/dr_wav.h"
-
-#if defined( __TINYC__ )
-
-typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTIMECAPS, NEAR *NPTIMECAPS, FAR *LPTIMECAPS;
-    typedef UINT MMRESULT;
-    #define TIMERR_NOERROR (0)
-    static MMRESULT (*timeGetDevCaps)( LPTIMECAPS ptc, UINT cbtc );
-    static MMRESULT (*timeBeginPeriod)( UINT uPeriod );
-    static MMRESULT (*timeEndPeriod)( UINT uPeriod );
-#endif
 
 #define FRAMETIMER_IMPLEMENTATION
 #include "libs/frametimer.h"
@@ -3603,18 +3622,8 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 #define PIXELFONT_BUILDER_IMPLEMENTATION
 #include "libs/pixelfont.h"
 
-#if defined( __TINYC__ )
-    typedef struct _RTL_CONDITION_VARIABLE { PVOID Ptr; } RTL_CONDITION_VARIABLE, *PRTL_CONDITION_VARIABLE;      
-    typedef RTL_CONDITION_VARIABLE CONDITION_VARIABLE, *PCONDITION_VARIABLE;
-    static VOID (*InitializeConditionVariable)( PCONDITION_VARIABLE ConditionVariable );
-    static VOID (*WakeConditionVariable)( PCONDITION_VARIABLE ConditionVariable );
-    static BOOL (*SleepConditionVariableCS)( PCONDITION_VARIABLE ConditionVariable, PCRITICAL_SECTION CriticalSection, DWORD dwMilliseconds );
-#endif
-
-#ifndef __wasm__
 #define THREAD_IMPLEMENTATION
 #include "libs/thread.h"
-#endif
 
 #define TSF_IMPLEMENTATION
 #define TSF_POW     pow
@@ -3643,7 +3652,15 @@ typedef struct timecaps_tag { UINT wPeriodMin; UINT wPeriodMax; } TIMECAPS, *PTI
 
 
 bool app_has_focus( app_t* app ) {
-    return app->has_focus;
+    #ifdef ALWAYS_UPDATE
+        return true;
+    #else
+        #ifndef NULL_PLATFORM
+            return app->has_focus;
+        #else
+            return true;
+        #endif
+    #endif
 }
 
 
@@ -3681,18 +3698,6 @@ int main( int argc, char** argv ) {
     //bin2arr( "framecol.gif", "crtframecol.h", "crtframecol" );
     //bin2arr( "framealpha.gif", "crtframealpha.h", "crtframealpha" );
     //bin2arr( "aweromgm.sf2", "awe32rom.h", "awe32rom" );
-
-    #if defined( __TINYC__ )
-        HMODULE kernel = LoadLibrary( "kernel32" );
-        InitializeConditionVariable = GetProcAddress( kernel, "InitializeConditionVariable");
-        WakeConditionVariable = GetProcAddress( kernel, "WakeConditionVariable");
-        SleepConditionVariableCS = GetProcAddress( kernel, "SleepConditionVariableCS");
-
-        HMODULE winmm = LoadLibrary( "winmm" );
-        timeGetDevCaps = GetProcAddress( winmm, "timeGetDevCaps");
-        timeBeginPeriod = GetProcAddress( winmm, "timeBeginPeriod");
-        timeEndPeriod = GetProcAddress( winmm, "timeEndPeriod");
-    #endif
 
     struct app_context_t app_context;
     app_context.argc = argc;

@@ -1151,7 +1151,7 @@ char const* app_filename( app_t* app ) { return ""; }
 char const* app_userdata( app_t* app ) { return ""; }
 char const* app_appdata( app_t* app ) { return ""; }
 APP_U64 app_time_count( app_t* app ) { return 0ULL; }
-APP_U64 app_time_freq( app_t* app ) { return 0ULL; }
+APP_U64 app_time_freq( app_t* app ) { return 1ULL; }
 void app_log( app_t* app, app_log_level_t level, char const* message ) { }
 void app_fatal_error( app_t* app, char const* message ) { }
 void app_pointer( app_t* app, int width, int height, APP_U32* pixels_abgr, int hotspot_x, int hotspot_y ) { }
