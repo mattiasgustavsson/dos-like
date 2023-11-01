@@ -1,4 +1,4 @@
-![build](https://github.com/mattiasgustavsson/dos-like/workflows/build/badge.svg)
+![build](https://github.com/mattiasgustavsson/dos-like/actions/workflows/main.yml/badge.svg)
 
 # dos-like
 
