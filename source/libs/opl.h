@@ -6,7 +6,7 @@
 opl.h - v0.1 - OPL3 (SoundBlaster16) emulation with MIDI compatible interface
 
 Do this:
-    #define OP_IMPLEMENTATION
+    #define OPL_IMPLEMENTATION
 before you include this file in *one* C/C++ file to create the implementation.
 
 ------------------------------------------------------------------------------
