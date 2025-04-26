@@ -99,3 +99,5 @@ build environment is already included.
 
 The wasm build environment is a compact distribution of [node](https://nodejs.org/en/download/), [clang/wasm-ld](https://releases.llvm.org/download.html),
 [WAjic](https://github.com/schellingb/wajic) and [wasm system libraries](https://github.com/emscripten-core/emscripten/tree/main/system).
+
+![dos-like](dos-like-box.jpg)
