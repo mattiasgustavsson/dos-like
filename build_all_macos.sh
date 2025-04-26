@@ -12,3 +12,4 @@ clang -o stranded.out source/stranded.c source/dos.c `sdl2-config --libs --cflag
 clang -o tracker.out source/tracker.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
 clang -o tunnel.out source/tunnel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
 clang -o voxel.out source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
+clang -o minivectorballs.out source/minivectorballs.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -framework OpenGL -lpthread
