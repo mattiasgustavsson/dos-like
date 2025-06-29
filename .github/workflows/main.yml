@@ -310,7 +310,7 @@ jobs:
       - name: build voxel
         run: |
           gcc -xc++ source/voxel.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
-build-wasm:
+  build-wasm:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
