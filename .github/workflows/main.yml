@@ -276,40 +276,40 @@ jobs:
           sudo apt-get install -qq libglew-dev
       - name: build burn
         run: |
-          gcc -xc++ source/burn.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/burn.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build edit
         run: |
-          gcc -xc++ source/edit.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/edit.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build julia
         run: |
-          gcc -xc++ source/julia.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/julia.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build mandelbrot
         run: |
-          gcc -xc++ source/mandelbrot.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/mandelbrot.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build plasma
         run: |
-          gcc -xc++ source/plasma.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/plasma.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build raycast
         run: |
-          gcc -xc++ source/raycast.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/raycast.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build rotozoom
         run: |
-          gcc -xc++ source/rotozoom.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/rotozoom.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build sound
         run: |
-          gcc -xc++ source/sound.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/sound.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build stranded
         run: |
-          gcc -xc++ source/stranded.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/stranded.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build tracker
         run: |
-          gcc -xc++ source/tracker.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/tracker.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build tunnel
         run: |
-          gcc -xc++ source/tunnel.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/tunnel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
       - name: build voxel
         run: |
-          gcc -xc++ source/voxel.c -xc++ source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+          g++ source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
   build-wasm:
     runs-on: windows-latest
     steps:
