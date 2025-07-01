@@ -10,3 +10,4 @@ wasm\node wasm\wajicup.js -embed files/stranded/ files/stranded/ source/stranded
 wasm\node wasm\wajicup.js source/tracker.c source/dos.c tracker.html
 wasm\node wasm\wajicup.js -embed files/tunnel.gif files/tunnel.gif source/tunnel.c source/dos.c tunnel.html
 wasm\node wasm\wajicup.js -embed files/C1W.gif files/C1W.gif -embed files/D1.gif files/D1.gif source/voxel.c source/dos.c voxel.html
+wasm\node wasm\wajicup.js source/minivectorballs.c source/dos.c minivectorballs.html

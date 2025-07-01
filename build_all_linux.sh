@@ -12,3 +12,4 @@ gcc -o stranded.out source/stranded.c source/dos.c `sdl2-config --libs --cflags`
 gcc -o tracker.out source/tracker.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
 gcc -o tunnel.out source/tunnel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
 gcc -o voxel.out source/voxel.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
+gcc -o minivectorballs.out source/minivectorballs.c source/dos.c `sdl2-config --libs --cflags` -lGLEW -lGL -lm -lpthread
