@@ -11,3 +11,4 @@ tcc\tcc source\stranded.c source\dos.c
 tcc\tcc source\tracker.c source\dos.c
 tcc\tcc source\tunnel.c source\dos.c
 tcc\tcc source\voxel.c source\dos.c
+tcc\tcc source\minivectorballs.c source\dos.c
